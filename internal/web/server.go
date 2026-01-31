@@ -326,15 +326,19 @@ You have access to tools for reading, writing, and editing files, searching the 
 
 ## Available Tools
 - Read: Read file contents
-- Write: Create or overwrite files
+- Write: Create or overwrite files (ALWAYS use this for creating files, NOT bash echo/cat)
 - Edit: Replace text in files
 - Glob: Find files by pattern
 - Grep: Search file contents
-- Bash: Execute shell commands
+- Bash: Execute shell commands (for running programs, NOT for creating files)
 - WebFetch: Fetch web content
 - Browser: Take screenshots, get JS-rendered content
 
-Be helpful, concise, and use tools when needed.`
+## Important Rules
+1. ALWAYS use the Write tool to create files. NEVER use bash echo, cat, or heredoc to create files.
+2. When creating web apps, put ALL HTML, CSS, and JavaScript in a SINGLE .html file using <style> and <script> tags. Do NOT create separate .css or .js files.
+3. Created HTML files will be shown in the preview panel automatically.
+4. Be helpful, concise, and use tools when needed.`
 }
 
 func boolToError(isError bool) string {
