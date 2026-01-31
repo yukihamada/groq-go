@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>groq-go Web</title>
+    <!-- Markdown & Syntax Highlighting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-tomorrow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1/plugins/autoloader/prism-autoloader.min.js"></script>
+    <!-- Diff display -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -533,30 +541,955 @@
                 border-top: 1px solid var(--border);
                 max-height: 50vh;
             }
+
+            .header-actions {
+                gap: 4px;
+            }
+
+            .header-actions .btn {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+
+            .header-actions select {
+                max-width: 100px;
+                font-size: 11px;
+                padding: 6px 4px;
+            }
+
+            header {
+                padding: 8px 10px;
+            }
+
+            .input-area {
+                padding: 8px;
+            }
+
+            button, input, select {
+                min-height: 40px;
+            }
+
+            .logo {
+                font-size: 1rem;
+            }
+
+            .status {
+                display: none;
+            }
+
+            #send-btn {
+                padding: 10px 14px;
+            }
+
+            .toggle-preview span {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .preview-panel {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 50vh;
+                z-index: 100;
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+            }
+
+            .chat-panel {
+                padding-bottom: 60px;
+            }
+
+            .suggestions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .suggestion {
+                text-align: center;
+            }
+        }
+
+        /* Markdown content styles */
+        .message.assistant h1,
+        .message.assistant h2,
+        .message.assistant h3 {
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .message.assistant h1 { font-size: 1.4em; }
+        .message.assistant h2 { font-size: 1.2em; }
+        .message.assistant h3 { font-size: 1.1em; }
+
+        .message.assistant ul,
+        .message.assistant ol {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+
+        .message.assistant li {
+            margin: 4px 0;
+        }
+
+        .message.assistant blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 12px;
+            margin: 8px 0;
+            color: var(--text-secondary);
+        }
+
+        .message.assistant table {
+            border-collapse: collapse;
+            margin: 8px 0;
+            width: 100%;
+        }
+
+        .message.assistant th,
+        .message.assistant td {
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            text-align: left;
+        }
+
+        .message.assistant th {
+            background: var(--bg-secondary);
+        }
+
+        .message.assistant a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .message.assistant a:hover {
+            text-decoration: underline;
+        }
+
+        /* Prism.js overrides for dark theme */
+        .message pre[class*="language-"],
+        .message code[class*="language-"] {
+            background: var(--bg-primary) !important;
+            text-shadow: none !important;
+        }
+
+        .message pre[class*="language-"] {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+
+        /* Conversation sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar.hidden {
+            display: none;
+        }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .new-chat-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .new-chat-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .conversation-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .conversation-item:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .conversation-item.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-left: 2px solid var(--accent);
+        }
+
+        .conversation-item .title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .conversation-item .delete-btn {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px 6px;
+        }
+
+        .conversation-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .conversation-item .delete-btn:hover {
+            color: var(--red);
+        }
+
+        .sidebar-toggle {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-toggle:hover {
+            border-color: var(--accent);
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 200;
+                width: 280px;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.visible {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 199;
+                display: none;
+            }
+
+            .sidebar-overlay.visible {
+                display: block;
+            }
+        }
+
+        /* Voice input button */
+        .voice-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .voice-btn:hover {
+            border-color: var(--accent);
+        }
+
+        .voice-btn.recording {
+            background: var(--red);
+            border-color: var(--red);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Voice Chat Mode */
+        .voice-chat-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 10, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .voice-chat-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px;
+        }
+
+        .voice-chat-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            font-size: 60px;
+            box-shadow: 0 0 60px rgba(168, 85, 247, 0.3);
+            transition: all 0.3s;
+        }
+
+        .voice-chat-avatar.listening {
+            box-shadow: 0 0 80px rgba(34, 197, 94, 0.5);
+            animation: listening-pulse 1.5s infinite;
+        }
+
+        .voice-chat-avatar.speaking {
+            box-shadow: 0 0 80px rgba(168, 85, 247, 0.6);
+            animation: speaking-pulse 0.5s infinite;
+        }
+
+        @keyframes listening-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes speaking-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .voice-chat-status {
+            font-size: 24px;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+
+        .voice-chat-transcript {
+            font-size: 18px;
+            color: var(--text-secondary);
+            min-height: 60px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .voice-chat-controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .voice-chat-btn {
+            padding: 15px 30px;
+            border-radius: 30px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .voice-chat-btn.primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .voice-chat-btn.primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .voice-chat-btn.secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .voice-chat-btn.secondary:hover {
+            border-color: var(--accent);
+        }
+
+        .voice-chat-btn.danger {
+            background: var(--red);
+            color: white;
+        }
+
+        .voice-wave {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            height: 40px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .voice-wave span {
+            width: 4px;
+            background: var(--accent);
+            border-radius: 2px;
+            animation: wave 0.5s ease-in-out infinite;
+        }
+
+        .voice-wave span:nth-child(1) { animation-delay: 0s; height: 20px; }
+        .voice-wave span:nth-child(2) { animation-delay: 0.1s; height: 30px; }
+        .voice-wave span:nth-child(3) { animation-delay: 0.2s; height: 40px; }
+        .voice-wave span:nth-child(4) { animation-delay: 0.3s; height: 30px; }
+        .voice-wave span:nth-child(5) { animation-delay: 0.4s; height: 20px; }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1); }
+        }
+
+        .voice-wave.inactive span {
+            animation: none;
+            height: 4px;
+        }
+
+        @media (max-width: 600px) {
+            .voice-chat-container {
+                padding: 20px;
+            }
+
+            .voice-chat-avatar {
+                width: 100px;
+                height: 100px;
+                font-size: 40px;
+            }
+
+            .voice-chat-status {
+                font-size: 18px;
+            }
+
+            .voice-chat-transcript {
+                font-size: 14px;
+            }
+
+            .voice-chat-controls {
+                flex-wrap: wrap;
+            }
+
+            .voice-chat-btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+
+        /* File upload drop zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            margin: 8px 16px;
+            transition: all 0.2s;
+            display: none;
+        }
+
+        .drop-zone.active {
+            display: block;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(168, 85, 247, 0.1);
+        }
+
+        /* Diff display */
+        .diff-container {
+            background: var(--bg-primary);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        /* Image preview styles */
+        .image-preview {
+            display: flex;
+            gap: 8px;
+            padding: 8px 16px;
+            overflow-x: auto;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .image-preview-item {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .image-preview-item img {
+            height: 60px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .image-preview-item button {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: none;
+            background: var(--red);
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message-images {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .message-image {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .message-image:hover {
+            transform: scale(1.05);
+        }
+
+        .image-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+
+        .image-modal button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-card);
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        /* Export menu */
+        .export-menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .export-menu button {
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .export-menu button:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Share modal */
+        .share-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .share-modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .share-modal-content h3 {
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .share-modal-content p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .share-url-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .share-url-container input {
+            flex: 1;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .share-url-container button,
+        .share-actions button {
+            padding: 10px 16px;
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .share-url-container button:hover,
+        .share-actions button:hover {
+            background: var(--accent-hover);
+        }
+
+        .share-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .share-actions button:last-child {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .share-actions button:last-child:hover {
+            background: var(--bg-input);
+        }
+
+        /* Knowledge Base modal */
+        .kb-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .kb-modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .kb-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .kb-modal-header h3 {
+            color: var(--text-primary);
+        }
+
+        .kb-doc-list {
+            margin-bottom: 20px;
+        }
+
+        .kb-doc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-input);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .kb-doc-item .name {
+            font-weight: 500;
+        }
+
+        .kb-doc-item .meta {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .kb-add-form {
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
+            margin-top: 16px;
+        }
+
+        .kb-add-form input,
+        .kb-add-form textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .kb-add-form textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .kb-btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Plugin modal */
+        .plugin-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .plugin-modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .plugin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-input);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .plugin-item .info {
+            flex: 1;
+        }
+
+        .plugin-item .name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .plugin-item .desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .plugin-item .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-right: 10px;
+        }
+
+        .plugin-item .status.enabled {
+            background: var(--green);
+            color: white;
+        }
+
+        .plugin-item .status.disabled {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .plugin-add-form {
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
+            margin-top: 16px;
+        }
+
+        .plugin-add-form input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .d2h-wrapper {
+            font-size: 12px !important;
+        }
+
+        .d2h-file-header {
+            background: var(--bg-secondary) !important;
+            border-color: var(--border) !important;
+        }
+
+        .d2h-code-line {
+            padding: 0 8px !important;
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="logo">🚀 groq<span>-go</span></div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+            <div class="logo">🚀 groq<span>-go</span></div>
+        </div>
         <div class="header-actions">
             <div class="status">
                 <div class="status-dot" id="status-dot"></div>
                 <span id="status-text">Connecting...</span>
             </div>
             <select id="model-select">
-                <option value="llama-3.3-70b-versatile">llama-3.3-70b</option>
-                <option value="llama-3.1-8b-instant">llama-3.1-8b</option>
-                <option value="mixtral-8x7b-32768">mixtral-8x7b</option>
+                <optgroup label="Llama">
+                    <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+                    <option value="llama-3.1-70b-versatile">Llama 3.1 70B</option>
+                    <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
+                    <option value="llama3-70b-8192">Llama 3 70B</option>
+                    <option value="llama3-8b-8192">Llama 3 8B</option>
+                </optgroup>
+                <optgroup label="Vision">
+                    <option value="llama-3.2-90b-vision-preview">Llama 3.2 90B Vision</option>
+                    <option value="llama-3.2-11b-vision-preview">Llama 3.2 11B Vision</option>
+                </optgroup>
+                <optgroup label="Other">
+                    <option value="moonshotai/kimi-k2-instruct">Kimi K2</option>
+                    <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+                    <option value="gemma2-9b-it">Gemma 2 9B</option>
+                </optgroup>
+                <optgroup label="OpenAI">
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                </optgroup>
             </select>
             <button class="toggle-preview" id="toggle-preview" onclick="togglePreview()">
-                📺 Preview
+                📺 <span>Preview</span>
             </button>
+            <button class="btn" onclick="showExportMenu()">Export</button>
+            <button class="btn" onclick="shareConversation()">Share</button>
+            <button class="btn" onclick="showKnowledgeBase()">KB</button>
+            <button class="btn" onclick="showPlugins()">Plugins</button>
+            <button class="btn" id="voice-chat-btn" onclick="startVoiceChat()">🎙️ Voice</button>
             <button class="btn" onclick="clearChat()">Clear</button>
         </div>
     </header>
 
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="main-container">
+        <!-- Conversation Sidebar -->
+        <div class="sidebar hidden" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Conversations</h3>
+                <button class="new-chat-btn" onclick="newConversation()">+ New</button>
+            </div>
+            <div class="conversation-list" id="conversation-list"></div>
+        </div>
+
         <div class="chat-panel" id="chat-panel">
             <div class="chat-container" id="chat-container">
                 <div class="empty-state" id="empty-state">
@@ -570,8 +1503,12 @@
                     </div>
                 </div>
             </div>
+            <div class="drop-zone" id="drop-zone">
+                <p>📁 Drop files here to upload</p>
+            </div>
             <div class="input-area">
                 <div class="input-wrapper">
+                    <button class="voice-btn" id="voice-btn" onclick="toggleVoiceInput()" title="Voice input">🎤</button>
                     <textarea
                         id="message-input"
                         placeholder="Describe what you want to create..."
@@ -609,6 +1546,12 @@
     </div>
 
     <script>
+        // ================== Configuration ==================
+        const DB_NAME = 'groq-go-db';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'conversations';
+
+        // ================== State ==================
         let ws;
         let isConnected = false;
         let currentAssistantMessage = null;
@@ -616,7 +1559,15 @@
         let files = new Map(); // filename -> content
         let currentFile = null;
         let currentTab = 'preview';
+        let currentConversationId = null;
+        let conversationMessages = []; // Local copy of messages for saving
+        let db = null;
+        let recognition = null;
+        let isRecording = false;
+        let sidebarVisible = false;
+        let pendingImages = []; // Base64 images to send with next message
 
+        // ================== DOM Elements ==================
         const chatContainer = document.getElementById('chat-container');
         const emptyState = document.getElementById('empty-state');
         const messageInput = document.getElementById('message-input');
@@ -631,6 +1582,1042 @@
         const fileList = document.getElementById('file-list');
         const previewEmpty = document.getElementById('preview-empty');
         const toggleBtn = document.getElementById('toggle-preview');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const conversationList = document.getElementById('conversation-list');
+        const voiceBtn = document.getElementById('voice-btn');
+        const dropZone = document.getElementById('drop-zone');
+
+        // ================== Marked.js Configuration ==================
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                headerIds: false,
+                mangle: false,
+                highlight: function(code, lang) {
+                    if (typeof Prism !== 'undefined' && lang && Prism.languages[lang]) {
+                        return Prism.highlight(code, Prism.languages[lang], lang);
+                    }
+                    return code;
+                }
+            });
+        }
+
+        // ================== IndexedDB ==================
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        store.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+                };
+            });
+        }
+
+        async function initDB() {
+            try {
+                db = await openDB();
+                await loadConversationList();
+            } catch (e) {
+                console.error('Failed to init IndexedDB:', e);
+            }
+        }
+
+        async function saveConversation() {
+            if (!db || !currentConversationId || conversationMessages.length === 0) return;
+
+            const firstUserMsg = conversationMessages.find(m => m.role === 'user');
+            const title = firstUserMsg ? firstUserMsg.content.substring(0, 50) : 'New conversation';
+
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+
+            await store.put({
+                id: currentConversationId,
+                title: title,
+                messages: conversationMessages,
+                files: Array.from(files.entries()),
+                timestamp: Date.now()
+            });
+
+            await loadConversationList();
+        }
+
+        async function loadConversation(id) {
+            if (!db) return;
+
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.get(id);
+
+            return new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function deleteConversation(id) {
+            if (!db) return;
+
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            await store.delete(id);
+
+            if (currentConversationId === id) {
+                newConversation();
+            }
+
+            await loadConversationList();
+        }
+
+        async function loadConversationList() {
+            if (!db) return;
+
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const index = store.index('timestamp');
+            const request = index.openCursor(null, 'prev');
+
+            const conversations = [];
+
+            return new Promise((resolve) => {
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        conversations.push(cursor.value);
+                        cursor.continue();
+                    } else {
+                        renderConversationList(conversations);
+                        resolve(conversations);
+                    }
+                };
+            });
+        }
+
+        function renderConversationList(conversations) {
+            conversationList.innerHTML = '';
+
+            conversations.forEach(conv => {
+                const item = document.createElement('div');
+                item.className = 'conversation-item' + (conv.id === currentConversationId ? ' active' : '');
+                item.innerHTML = `
+                    <span class="title">${escapeHtml(conv.title)}</span>
+                    <button class="delete-btn" onclick="event.stopPropagation(); deleteConversation('${conv.id}')">✕</button>
+                `;
+                item.onclick = () => switchConversation(conv.id);
+                conversationList.appendChild(item);
+            });
+        }
+
+        async function switchConversation(id) {
+            // Save current conversation first
+            await saveConversation();
+
+            // Load the selected conversation
+            const conv = await loadConversation(id);
+            if (!conv) return;
+
+            currentConversationId = id;
+            conversationMessages = conv.messages || [];
+            files = new Map(conv.files || []);
+
+            // Restore UI
+            chatContainer.innerHTML = '';
+            if (emptyState) {
+                chatContainer.appendChild(emptyState);
+                emptyState.style.display = conversationMessages.length === 0 ? 'flex' : 'none';
+            }
+
+            // Render messages
+            conversationMessages.forEach(msg => {
+                if (msg.role === 'user') {
+                    addMessage(msg.content, 'user');
+                } else if (msg.role === 'assistant') {
+                    const div = addMessage('', 'assistant');
+                    div.innerHTML = formatContent(msg.content);
+                } else if (msg.role === 'tool') {
+                    // Skip tool messages in display for now
+                }
+            });
+
+            // Restore files
+            updateFileList();
+            if (files.size > 0) {
+                const firstHtml = Array.from(files.keys()).find(f => f.endsWith('.html'));
+                if (firstHtml) selectFile(firstHtml);
+            }
+
+            // Sync with server
+            ws.send(JSON.stringify({ type: 'clear' }));
+            conversationMessages.forEach(msg => {
+                if (msg.role === 'user') {
+                    ws.send(JSON.stringify({ type: 'restore', messages: conversationMessages }));
+                }
+            });
+
+            await loadConversationList();
+
+            if (window.innerWidth <= 900) {
+                toggleSidebar();
+            }
+        }
+
+        function newConversation() {
+            saveConversation();
+
+            currentConversationId = 'conv-' + Date.now();
+            conversationMessages = [];
+            files.clear();
+            currentFile = null;
+
+            chatContainer.innerHTML = '';
+            if (emptyState) {
+                chatContainer.appendChild(emptyState);
+                emptyState.style.display = 'flex';
+            }
+
+            updateFileList();
+            previewIframe.srcdoc = '';
+            previewCode.textContent = '';
+
+            ws.send(JSON.stringify({ type: 'clear' }));
+
+            loadConversationList();
+
+            if (window.innerWidth <= 900) {
+                toggleSidebar();
+            }
+        }
+
+        function exportConversation(format = 'json') {
+            if (format === 'json') {
+                const data = {
+                    id: currentConversationId,
+                    messages: conversationMessages,
+                    files: Array.from(files.entries()),
+                    exportedAt: new Date().toISOString()
+                };
+                downloadFile(JSON.stringify(data, null, 2), `conversation-${currentConversationId}.json`, 'application/json');
+            } else if (format === 'html' || format === 'pdf') {
+                const html = generateExportHTML();
+                if (format === 'html') {
+                    downloadFile(html, `conversation-${currentConversationId}.html`, 'text/html');
+                } else {
+                    // Open in new window for printing to PDF
+                    const win = window.open('', '_blank');
+                    win.document.write(html);
+                    win.document.close();
+                    setTimeout(() => win.print(), 500);
+                }
+            }
+        }
+
+        function generateExportHTML() {
+            const messages = conversationMessages.map(msg => {
+                const role = msg.role === 'user' ? 'You' : 'Assistant';
+                const content = typeof msg.content === 'string' ? msg.content : '[Multimodal content]';
+                return `<div class="message ${msg.role}"><strong>${role}:</strong><div>${marked.parse(content)}</div></div>`;
+            }).join('');
+
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Conversation Export</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+        .message { margin: 20px 0; padding: 15px; border-radius: 8px; }
+        .message.user { background: #f3e8ff; }
+        .message.assistant { background: #f5f5f5; }
+        pre { background: #1e1e1e; color: #fff; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        code { background: #e5e5e5; padding: 2px 5px; border-radius: 3px; }
+        pre code { background: none; }
+        h1 { border-bottom: 2px solid #a855f7; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Conversation Export</h1>
+    <p><em>Exported: ${new Date().toLocaleString()}</em></p>
+    ${messages}
+</body>
+</html>`;
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showExportMenu() {
+            const menu = document.createElement('div');
+            menu.className = 'export-menu';
+            menu.innerHTML = `
+                <button onclick="exportConversation('json'); this.parentElement.remove()">JSON</button>
+                <button onclick="exportConversation('html'); this.parentElement.remove()">HTML</button>
+                <button onclick="exportConversation('pdf'); this.parentElement.remove()">PDF</button>
+            `;
+            document.body.appendChild(menu);
+            setTimeout(() => menu.onclick = () => menu.remove(), 100);
+        }
+
+        // ================== Share ==================
+        async function shareConversation() {
+            if (conversationMessages.length === 0) {
+                addSystemMessage('No conversation to share');
+                return;
+            }
+
+            try {
+                const firstUserMsg = conversationMessages.find(m => m.role === 'user');
+                const title = (firstUserMsg?.content?.slice(0, 50) || 'Shared Conversation') + '...';
+                const response = await fetch('/api/share', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: currentConversationId,
+                        title: title,
+                        messages: conversationMessages,
+                        expires_in: 0 // Never expires
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to create share link');
+
+                const data = await response.json();
+                const shareUrl = window.location.origin + data.share_url;
+
+                // Show share modal
+                showShareModal(shareUrl);
+            } catch (error) {
+                console.error('Share error:', error);
+                addSystemMessage('Failed to create share link: ' + error.message);
+            }
+        }
+
+        function showShareModal(url) {
+            const modal = document.createElement('div');
+            modal.className = 'share-modal';
+            modal.innerHTML = `
+                <div class="share-modal-content">
+                    <h3>Share Conversation</h3>
+                    <p>Anyone with this link can view your conversation:</p>
+                    <div class="share-url-container">
+                        <input type="text" value="${url}" readonly id="share-url-input">
+                        <button onclick="copyShareUrl()">Copy</button>
+                    </div>
+                    <div class="share-actions">
+                        <button onclick="window.open('${url}', '_blank')">Open in New Tab</button>
+                        <button onclick="this.closest('.share-modal').remove()">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
+        }
+
+        function copyShareUrl() {
+            const input = document.getElementById('share-url-input');
+            input.select();
+            document.execCommand('copy');
+            const btn = input.nextElementSibling;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
+
+        // ================== Knowledge Base ==================
+        async function showKnowledgeBase() {
+            try {
+                const response = await fetch('/api/knowledge');
+                const data = await response.json();
+
+                const modal = document.createElement('div');
+                modal.className = 'kb-modal';
+                modal.innerHTML = `
+                    <div class="kb-modal-content">
+                        <div class="kb-modal-header">
+                            <h3>Knowledge Base</h3>
+                            <button class="btn" onclick="this.closest('.kb-modal').remove()">✕</button>
+                        </div>
+                        <div class="kb-doc-list" id="kb-doc-list">
+                            ${data.documents.length === 0
+                                ? '<p style="color: var(--text-muted)">No documents in knowledge base. Add documents below.</p>'
+                                : data.documents.map(doc => `
+                                    <div class="kb-doc-item">
+                                        <div>
+                                            <div class="name">${doc.name}</div>
+                                            <div class="meta">ID: ${doc.id} | Added: ${new Date(doc.created_at).toLocaleDateString()}</div>
+                                        </div>
+                                        <button class="btn" onclick="deleteKBDocument('${doc.id}')">Delete</button>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                        <div class="kb-add-form">
+                            <h4 style="margin-bottom: 12px; color: var(--text-primary)">Add Document</h4>
+                            <input type="text" id="kb-doc-name" placeholder="Document name (e.g., API Documentation)">
+                            <textarea id="kb-doc-content" placeholder="Paste document content here..."></textarea>
+                            <div class="kb-btn-row">
+                                <button class="btn" onclick="addKBDocument()">Add Document</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                modal.onclick = (e) => {
+                    if (e.target === modal) modal.remove();
+                };
+            } catch (error) {
+                console.error('KB error:', error);
+                addSystemMessage('Failed to load knowledge base: ' + error.message);
+            }
+        }
+
+        async function addKBDocument() {
+            const name = document.getElementById('kb-doc-name').value.trim();
+            const content = document.getElementById('kb-doc-content').value.trim();
+
+            if (!name || !content) {
+                alert('Please enter both name and content');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/knowledge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, content })
+                });
+
+                if (!response.ok) throw new Error('Failed to add document');
+
+                addSystemMessage('Document added to knowledge base: ' + name);
+                document.querySelector('.kb-modal').remove();
+                showKnowledgeBase(); // Refresh
+            } catch (error) {
+                console.error('Add KB error:', error);
+                alert('Failed to add document: ' + error.message);
+            }
+        }
+
+        async function deleteKBDocument(id) {
+            if (!confirm('Delete this document from knowledge base?')) return;
+
+            try {
+                const response = await fetch('/api/knowledge/' + id, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Failed to delete document');
+
+                addSystemMessage('Document deleted from knowledge base');
+                document.querySelector('.kb-modal').remove();
+                showKnowledgeBase(); // Refresh
+            } catch (error) {
+                console.error('Delete KB error:', error);
+                alert('Failed to delete document: ' + error.message);
+            }
+        }
+
+        // ================== Plugins ==================
+        async function showPlugins() {
+            try {
+                const response = await fetch('/api/plugins');
+                const data = await response.json();
+
+                const modal = document.createElement('div');
+                modal.className = 'plugin-modal';
+                modal.innerHTML = `
+                    <div class="plugin-modal-content">
+                        <div class="kb-modal-header">
+                            <h3>Plugins</h3>
+                            <button class="btn" onclick="this.closest('.plugin-modal').remove()">✕</button>
+                        </div>
+                        <div class="plugin-list">
+                            ${(!data.plugins || data.plugins.length === 0)
+                                ? '<p style="color: var(--text-muted)">No plugins installed. Add a plugin below.</p>'
+                                : data.plugins.map(p => `
+                                    <div class="plugin-item">
+                                        <div class="info">
+                                            <div class="name">${p.name}</div>
+                                            <div class="desc">${p.description || 'No description'}</div>
+                                            <div class="desc">${p.tools?.length || 0} tools • ${p.url || 'Local'}</div>
+                                        </div>
+                                        <span class="status ${p.enabled ? 'enabled' : 'disabled'}">${p.enabled ? 'ON' : 'OFF'}</span>
+                                        <button class="btn" onclick="togglePlugin('${p.name}', ${!p.enabled})">${p.enabled ? 'Disable' : 'Enable'}</button>
+                                        <button class="btn" onclick="deletePlugin('${p.name}')">Delete</button>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                        <div class="plugin-add-form">
+                            <h4 style="margin-bottom: 12px; color: var(--text-primary)">Add Plugin</h4>
+                            <input type="text" id="plugin-name" placeholder="Plugin name">
+                            <input type="text" id="plugin-url" placeholder="Plugin URL (e.g., http://localhost:3001)">
+                            <input type="text" id="plugin-desc" placeholder="Description (optional)">
+                            <div class="kb-btn-row">
+                                <button class="btn" onclick="addPlugin()">Add Plugin</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                modal.onclick = (e) => {
+                    if (e.target === modal) modal.remove();
+                };
+            } catch (error) {
+                console.error('Plugin error:', error);
+                addSystemMessage('Failed to load plugins: ' + error.message);
+            }
+        }
+
+        async function addPlugin() {
+            const name = document.getElementById('plugin-name').value.trim();
+            const url = document.getElementById('plugin-url').value.trim();
+            const desc = document.getElementById('plugin-desc').value.trim();
+
+            if (!name) {
+                alert('Please enter a plugin name');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/plugins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, url, description: desc, enabled: true })
+                });
+
+                if (!response.ok) throw new Error('Failed to add plugin');
+
+                addSystemMessage('Plugin added: ' + name);
+                document.querySelector('.plugin-modal').remove();
+                showPlugins();
+            } catch (error) {
+                console.error('Add plugin error:', error);
+                alert('Failed to add plugin: ' + error.message);
+            }
+        }
+
+        async function togglePlugin(name, enable) {
+            try {
+                const action = enable ? 'enable' : 'disable';
+                const response = await fetch(`/api/plugins/${name}/${action}`, { method: 'PUT' });
+                if (!response.ok) throw new Error(`Failed to ${action} plugin`);
+
+                document.querySelector('.plugin-modal').remove();
+                showPlugins();
+            } catch (error) {
+                console.error('Toggle plugin error:', error);
+                alert('Failed to toggle plugin: ' + error.message);
+            }
+        }
+
+        async function deletePlugin(name) {
+            if (!confirm('Delete this plugin?')) return;
+
+            try {
+                const response = await fetch('/api/plugins/' + name, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Failed to delete plugin');
+
+                addSystemMessage('Plugin deleted: ' + name);
+                document.querySelector('.plugin-modal').remove();
+                showPlugins();
+            } catch (error) {
+                console.error('Delete plugin error:', error);
+                alert('Failed to delete plugin: ' + error.message);
+            }
+        }
+
+        // ================== Sidebar ==================
+        function toggleSidebar() {
+            sidebarVisible = !sidebarVisible;
+            sidebar.classList.toggle('hidden', !sidebarVisible);
+            sidebar.classList.toggle('visible', sidebarVisible);
+            sidebarOverlay.classList.toggle('visible', sidebarVisible && window.innerWidth <= 900);
+        }
+
+        // ================== Voice Input ==================
+        let voiceChatMode = false;
+        let voiceChatOverlay = null;
+        let currentTranscript = '';
+        let silenceTimer = null;
+        let isSpeaking = false;
+
+        function initVoiceInput() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                voiceBtn.style.display = 'none';
+                document.getElementById('voice-chat-btn').style.display = 'none';
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            // Prefer Japanese, fallback to browser language
+            recognition.lang = navigator.language.startsWith('ja') ? 'ja-JP' : (navigator.language || 'en-US');
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+                let isFinal = false;
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        isFinal = true;
+                    }
+                }
+
+                if (voiceChatMode) {
+                    currentTranscript = transcript;
+                    updateVoiceChatUI('listening', transcript);
+
+                    // Auto-send after silence
+                    clearTimeout(silenceTimer);
+                    if (isFinal && transcript.trim()) {
+                        silenceTimer = setTimeout(() => {
+                            sendVoiceMessage(transcript.trim());
+                        }, 1000);
+                    }
+                } else {
+                    messageInput.value = transcript;
+                    messageInput.style.height = 'auto';
+                    messageInput.style.height = Math.min(messageInput.scrollHeight, 150) + 'px';
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (event.error !== 'no-speech') {
+                    stopRecording();
+                }
+            };
+
+            recognition.onend = () => {
+                if (isRecording && !isSpeaking) {
+                    // Restart if still recording and not speaking
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        // Ignore if already started
+                    }
+                }
+            };
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) return;
+
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            isRecording = true;
+            voiceBtn.classList.add('recording');
+            try {
+                recognition.start();
+            } catch (e) {
+                // Already started
+            }
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            voiceBtn.classList.remove('recording');
+            try {
+                recognition.stop();
+            } catch (e) {
+                // Already stopped
+            }
+        }
+
+        // ================== Voice Chat Mode ==================
+        let voiceLang = navigator.language.startsWith('ja') ? 'ja-JP' : 'en-US';
+
+        function startVoiceChat() {
+            if (!recognition) {
+                alert('Voice recognition is not supported in your browser');
+                return;
+            }
+
+            voiceChatMode = true;
+
+            const isJa = voiceLang === 'ja-JP';
+            voiceChatOverlay = document.createElement('div');
+            voiceChatOverlay.className = 'voice-chat-overlay';
+            voiceChatOverlay.innerHTML = `
+                <div class="voice-chat-container">
+                    <div class="voice-chat-avatar" id="vc-avatar">🤖</div>
+                    <div class="voice-wave" id="vc-wave">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="voice-chat-status" id="vc-status">${isJa ? '🎤 聞いています...' : '🎤 Listening...'}</div>
+                    <div class="voice-chat-transcript" id="vc-transcript">${isJa ? '話しかけてください' : 'Say something to start'}</div>
+                    <div class="voice-chat-controls">
+                        <button class="voice-chat-btn secondary" onclick="toggleVoiceLang()">
+                            <span id="vc-lang-icon">${isJa ? '🇯🇵' : '🇺🇸'}</span> <span id="vc-lang-text">${isJa ? '日本語' : 'English'}</span>
+                        </button>
+                        <button class="voice-chat-btn secondary" onclick="toggleVoiceChatMute()">
+                            <span id="vc-mute-icon">🔊</span>
+                        </button>
+                        <button class="voice-chat-btn danger" onclick="endVoiceChat()">${isJa ? '終了' : 'End'}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(voiceChatOverlay);
+
+            // Set recognition language
+            recognition.lang = voiceLang;
+
+            currentTranscript = '';
+            startRecording();
+            updateVoiceChatUI('listening', '');
+        }
+
+        function toggleVoiceLang() {
+            voiceLang = voiceLang === 'ja-JP' ? 'en-US' : 'ja-JP';
+            const isJa = voiceLang === 'ja-JP';
+
+            document.getElementById('vc-lang-icon').textContent = isJa ? '🇯🇵' : '🇺🇸';
+            document.getElementById('vc-lang-text').textContent = isJa ? '日本語' : 'English';
+
+            // Restart recognition with new language
+            stopRecording();
+            recognition.lang = voiceLang;
+            setTimeout(() => startRecording(), 100);
+
+            updateVoiceChatUI('listening', '');
+        }
+
+        function endVoiceChat() {
+            voiceChatMode = false;
+            stopRecording();
+            speechSynthesis.cancel();
+            clearTimeout(silenceTimer);
+
+            if (voiceChatOverlay) {
+                voiceChatOverlay.remove();
+                voiceChatOverlay = null;
+            }
+        }
+
+        let voiceChatMuted = false;
+        function toggleVoiceChatMute() {
+            voiceChatMuted = !voiceChatMuted;
+            document.getElementById('vc-mute-icon').textContent = voiceChatMuted ? '🔇' : '🔊';
+        }
+
+        function updateVoiceChatUI(state, text) {
+            if (!voiceChatOverlay) return;
+
+            const avatar = document.getElementById('vc-avatar');
+            const status = document.getElementById('vc-status');
+            const transcript = document.getElementById('vc-transcript');
+            const wave = document.getElementById('vc-wave');
+            const isJa = voiceLang === 'ja-JP';
+
+            avatar.classList.remove('listening', 'speaking');
+            wave.classList.remove('inactive');
+
+            switch (state) {
+                case 'listening':
+                    avatar.classList.add('listening');
+                    status.textContent = isJa ? '🎤 聞いています...' : '🎤 Listening...';
+                    if (text) {
+                        transcript.textContent = text;
+                    } else {
+                        transcript.textContent = isJa ? '話しかけてください' : 'Say something...';
+                    }
+                    break;
+                case 'processing':
+                    wave.classList.add('inactive');
+                    status.textContent = isJa ? '🤔 考えています...' : '🤔 Thinking...';
+                    transcript.textContent = text || currentTranscript;
+                    break;
+                case 'speaking':
+                    avatar.classList.add('speaking');
+                    status.textContent = isJa ? '🔊 話しています...' : '🔊 Speaking...';
+                    transcript.textContent = text;
+                    break;
+                case 'idle':
+                    wave.classList.add('inactive');
+                    status.textContent = isJa ? '準備完了' : 'Ready';
+                    break;
+            }
+        }
+
+        async function sendVoiceMessage(text) {
+            if (!voiceChatMode || !text) return;
+
+            // Check WebSocket connection
+            if (!isConnected) {
+                updateVoiceChatUI('idle', voiceLang === 'ja-JP' ? '接続されていません' : 'Not connected');
+                setTimeout(() => {
+                    startRecording();
+                    updateVoiceChatUI('listening', '');
+                }, 2000);
+                return;
+            }
+
+            // Stop listening while processing
+            stopRecording();
+            updateVoiceChatUI('processing', text);
+
+            hideEmptyState();
+
+            // Add to conversation messages
+            conversationMessages.push({ role: 'user', content: text });
+            addMessage(text, 'user');
+            showTyping();
+
+            // Send via WebSocket
+            ws.send(JSON.stringify({
+                type: 'chat',
+                content: text
+            }));
+        }
+
+        // Enhanced speak function for voice chat
+        let japaneseVoice = null;
+        let englishVoice = null;
+
+        function initVoices() {
+            const voices = speechSynthesis.getVoices();
+
+            // Find best Japanese voice
+            const jaVoices = voices.filter(v => v.lang.startsWith('ja'));
+            // Prefer premium voices (Kyoko, O-Ren, Otoya on macOS)
+            japaneseVoice = jaVoices.find(v =>
+                v.name.includes('Kyoko') ||
+                v.name.includes('O-Ren') ||
+                v.name.includes('Otoya') ||
+                v.name.includes('Google')
+            ) || jaVoices[0];
+
+            // Find English voice
+            const enVoices = voices.filter(v => v.lang.startsWith('en'));
+            englishVoice = enVoices.find(v =>
+                v.name.includes('Samantha') ||
+                v.name.includes('Google') ||
+                v.name.includes('Karen')
+            ) || enVoices[0];
+        }
+
+        // Load voices
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = initVoices;
+        }
+        setTimeout(initVoices, 100);
+
+        function isJapanese(text) {
+            // Check if text contains Japanese characters
+            return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
+        }
+
+        function speak(text, callback) {
+            if (!('speechSynthesis' in window) || voiceChatMuted) {
+                if (callback) callback();
+                return;
+            }
+
+            // Clean text for speech (remove markdown, code blocks, etc.)
+            let cleanText = text
+                .replace(/```[\s\S]*?```/g, isJapanese(text) ? 'コードブロック' : 'code block')
+                .replace(/`([^`]+)`/g, '$1')
+                .replace(/\*\*([^*]+)\*\*/g, '$1')
+                .replace(/\*([^*]+)\*/g, '$1')
+                .replace(/#{1,6}\s/g, '')
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+                .replace(/[-*]\s/g, '')
+                .replace(/\n+/g, '。')
+                .trim();
+
+            // Limit length for speech
+            const maxLen = isJapanese(cleanText) ? 800 : 500;
+            if (cleanText.length > maxLen) {
+                cleanText = cleanText.substring(0, maxLen) + (isJapanese(cleanText) ? '。以下省略。' : '... and more.');
+            }
+
+            if (!cleanText) {
+                if (callback) callback();
+                return;
+            }
+
+            // Cancel any ongoing speech
+            speechSynthesis.cancel();
+
+            isSpeaking = true;
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+
+            // Set appropriate voice and settings based on language
+            if (isJapanese(cleanText)) {
+                utterance.lang = 'ja-JP';
+                if (japaneseVoice) {
+                    utterance.voice = japaneseVoice;
+                }
+                utterance.rate = 1.0;  // Natural speed for Japanese
+                utterance.pitch = 1.0;
+            } else {
+                utterance.lang = 'en-US';
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                }
+                utterance.rate = 1.1;
+                utterance.pitch = 1.0;
+            }
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                if (callback) callback();
+            };
+
+            utterance.onerror = (e) => {
+                console.error('Speech error:', e);
+                isSpeaking = false;
+                if (callback) callback();
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        // Hook into message handling for voice chat
+        function handleVoiceChatResponse(content) {
+            if (!voiceChatMode) return;
+
+            updateVoiceChatUI('speaking', content);
+
+            speak(content, () => {
+                if (voiceChatMode) {
+                    // Resume listening after speaking
+                    setTimeout(() => {
+                        currentTranscript = '';
+                        startRecording();
+                        updateVoiceChatUI('listening', '');
+                    }, 500);
+                }
+            });
+        }
+
+        // ================== File Upload ==================
+        function initFileUpload() {
+            // Show drop zone on drag
+            document.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('active');
+            });
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (!e.relatedTarget || !dropZone.contains(e.relatedTarget)) {
+                    dropZone.classList.remove('active');
+                }
+            });
+
+            dropZone.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('active', 'dragover');
+
+                const files = Array.from(e.dataTransfer.files);
+                for (const file of files) {
+                    await uploadFile(file);
+                }
+            });
+        }
+
+        async function uploadFile(file) {
+            // Check if it's an image
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const base64 = event.target.result;
+                    pendingImages.push(base64);
+                    updateImagePreview();
+                    addSystemMessage(`Image added: ${file.name}`);
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+
+            // Handle other files
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    addSystemMessage(`Uploaded: ${file.name}`);
+                    files.set(file.name, { path: result.path, content: result.content });
+                    updateFileList();
+                } else {
+                    addSystemMessage(`Failed to upload: ${file.name}`);
+                }
+            } catch (e) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const content = event.target.result;
+                    files.set(file.name, { path: file.name, content: content });
+                    updateFileList();
+                    addSystemMessage(`Added file: ${file.name}`);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function updateImagePreview() {
+            let preview = document.getElementById('image-preview');
+            if (!preview) {
+                preview = document.createElement('div');
+                preview.id = 'image-preview';
+                preview.className = 'image-preview';
+                document.querySelector('.input-area').insertBefore(preview, document.querySelector('.input-wrapper'));
+            }
+
+            preview.innerHTML = pendingImages.map((img, i) => `
+                <div class="image-preview-item">
+                    <img src="${img}" alt="Preview">
+                    <button onclick="removeImage(${i})">×</button>
+                </div>
+            `).join('');
+
+            preview.style.display = pendingImages.length > 0 ? 'flex' : 'none';
+        }
+
+        function removeImage(index) {
+            pendingImages.splice(index, 1);
+            updateImagePreview();
+        }
+
+        function clearImages() {
+            pendingImages = [];
+            updateImagePreview();
+        }
 
         function connect() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -682,14 +2669,23 @@
                     break;
 
                 case 'tool_result':
-                    addToolResult(msg.tool, msg.result, msg.error);
+                    addToolResult(msg.tool, msg.result, msg.error, msg.diff_data);
                     // Check if a file was created/modified
                     checkForFileChanges(msg.tool, msg.args, msg.result);
                     break;
 
                 case 'done':
                     if (currentAssistantMessage) {
-                        currentAssistantMessage.innerHTML = formatContent(currentAssistantMessage.textContent);
+                        const content = currentAssistantMessage.textContent;
+                        currentAssistantMessage.innerHTML = formatContent(content);
+                        // Save assistant message
+                        conversationMessages.push({ role: 'assistant', content: content });
+                        saveConversation();
+
+                        // Voice chat: speak the response
+                        if (voiceChatMode) {
+                            handleVoiceChatResponse(content);
+                        }
                     }
                     currentAssistantMessage = null;
                     hideTyping();
@@ -823,17 +2819,38 @@
             const content = messageInput.value.trim();
             if (!content || !isConnected) return;
 
+            // Stop voice recording if active
+            if (isRecording) {
+                stopRecording();
+            }
+
             hideEmptyState();
-            addMessage(content, 'user');
+
+            // Show message with image indicator if images attached
+            if (pendingImages.length > 0) {
+                addMessageWithImages(content, 'user', pendingImages);
+            } else {
+                addMessage(content, 'user');
+            }
             showTyping();
+
+            // Save to local messages
+            conversationMessages.push({ role: 'user', content: content, images: [...pendingImages] });
 
             ws.send(JSON.stringify({
                 type: 'chat',
-                content: content
+                content: content,
+                images: pendingImages
             }));
 
             messageInput.value = '';
             messageInput.style.height = 'auto';
+
+            // Clear images after sending
+            clearImages();
+
+            // Auto-save after sending
+            saveConversation();
         }
 
         function sendSuggestion(text) {
@@ -862,6 +2879,34 @@
             return div;
         }
 
+        function addMessageWithImages(content, role, images) {
+            const div = document.createElement('div');
+            div.className = 'message ' + role;
+
+            let html = '';
+            if (images && images.length > 0) {
+                html += '<div class="message-images">';
+                images.forEach(img => {
+                    html += `<img src="${img}" class="message-image" onclick="openImageModal(this.src)">`;
+                });
+                html += '</div>';
+            }
+            html += formatContent(content);
+
+            div.innerHTML = html;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+
+        function openImageModal(src) {
+            const modal = document.createElement('div');
+            modal.className = 'image-modal';
+            modal.innerHTML = `<img src="${src}"><button onclick="this.parentElement.remove()">×</button>`;
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            document.body.appendChild(modal);
+        }
+
         function addSystemMessage(content) {
             const div = document.createElement('div');
             div.className = 'message system';
@@ -878,14 +2923,91 @@
             scrollToBottom();
         }
 
-        function addToolResult(tool, result, error) {
+        function addToolResult(tool, result, error, diffData) {
             const div = document.createElement('div');
             div.className = 'message tool';
             const resultClass = error ? 'error' : 'success';
             const icon = error ? '✗' : '✓';
-            div.innerHTML = '<div class="tool-header">' + icon + ' ' + escapeHtml(tool) + '</div><div class="tool-result ' + resultClass + '">' + escapeHtml(truncate(result, 300)) + '</div>';
+
+            let content = '<div class="tool-header">' + icon + ' ' + escapeHtml(tool) + '</div>';
+            content += '<div class="tool-result ' + resultClass + '">' + escapeHtml(truncate(result, 300)) + '</div>';
+
+            // Add diff display if available
+            if (diffData && typeof Diff2HtmlUI !== 'undefined') {
+                try {
+                    const data = JSON.parse(diffData);
+                    if (data.old_content && data.new_content) {
+                        const diffId = 'diff-' + Date.now();
+                        content += '<div id="' + diffId + '" class="diff-container"></div>';
+                        div.innerHTML = content;
+                        chatContainer.appendChild(div);
+
+                        // Generate unified diff
+                        const diff = createUnifiedDiff(data.file_path, data.old_content, data.new_content);
+                        const configuration = {
+                            drawFileList: false,
+                            matching: 'lines',
+                            outputFormat: 'side-by-side',
+                        };
+                        const diff2htmlUi = new Diff2HtmlUI(document.getElementById(diffId), diff, configuration);
+                        diff2htmlUi.draw();
+
+                        scrollToBottom();
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Failed to parse diff data:', e);
+                }
+            }
+
+            div.innerHTML = content;
             chatContainer.appendChild(div);
             scrollToBottom();
+        }
+
+        function createUnifiedDiff(filePath, oldContent, newContent) {
+            const oldLines = oldContent.split('\n');
+            const newLines = newContent.split('\n');
+
+            let diff = '--- a/' + filePath + '\n';
+            diff += '+++ b/' + filePath + '\n';
+
+            // Simple diff - show changed lines
+            const maxLen = Math.max(oldLines.length, newLines.length);
+            let hunkStart = -1;
+            let hunk = '';
+
+            for (let i = 0; i < maxLen; i++) {
+                const oldLine = oldLines[i] || '';
+                const newLine = newLines[i] || '';
+
+                if (oldLine !== newLine) {
+                    if (hunkStart < 0) {
+                        hunkStart = i;
+                        const start = Math.max(0, i - 3);
+                        diff += '@@ -' + (start + 1) + ',' + Math.min(7, maxLen - start) + ' +' + (start + 1) + ',' + Math.min(7, maxLen - start) + ' @@\n';
+
+                        // Context before
+                        for (let j = start; j < i; j++) {
+                            diff += ' ' + (oldLines[j] || '') + '\n';
+                        }
+                    }
+
+                    if (i < oldLines.length) {
+                        diff += '-' + oldLine + '\n';
+                    }
+                    if (i < newLines.length) {
+                        diff += '+' + newLine + '\n';
+                    }
+                } else if (hunkStart >= 0) {
+                    diff += ' ' + oldLine + '\n';
+                    if (i - hunkStart > 6) {
+                        hunkStart = -1; // End hunk
+                    }
+                }
+            }
+
+            return diff;
         }
 
         function showTyping() {
@@ -917,6 +3039,21 @@
         }
 
         function formatContent(text) {
+            if (typeof marked !== 'undefined') {
+                try {
+                    let html = marked.parse(text);
+                    // Apply Prism highlighting after marked
+                    setTimeout(() => {
+                        if (typeof Prism !== 'undefined') {
+                            Prism.highlightAll();
+                        }
+                    }, 0);
+                    return html;
+                } catch (e) {
+                    console.error('Marked error:', e);
+                }
+            }
+            // Fallback to simple formatting
             let html = escapeHtml(text);
             html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -946,6 +3083,9 @@
 
         // Event listeners
         messageInput.addEventListener('keydown', (e) => {
+            // IME入力中（日本語変換中など）は無視
+            if (e.isComposing || e.keyCode === 229) return;
+
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
@@ -964,8 +3104,30 @@
             }));
         });
 
-        // Initialize
-        connect();
+        // ================== Initialize ==================
+        async function init() {
+            // Generate conversation ID
+            currentConversationId = 'conv-' + Date.now();
+
+            // Initialize IndexedDB
+            await initDB();
+
+            // Initialize voice input
+            initVoiceInput();
+
+            // Initialize file upload
+            initFileUpload();
+
+            // Connect WebSocket
+            connect();
+
+            // Show sidebar by default on desktop
+            if (window.innerWidth > 900) {
+                toggleSidebar();
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>

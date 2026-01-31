@@ -10,8 +10,10 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	APIKey string `mapstructure:"api_key"`
-	Model  string `mapstructure:"model"`
+	APIKey        string `mapstructure:"api_key"`
+	Model         string `mapstructure:"model"`
+	MoonshotKey   string `mapstructure:"moonshot_api_key"`
+	OpenAIKey     string `mapstructure:"openai_api_key"`
 }
 
 // DefaultModel is the default LLM model
@@ -41,6 +43,8 @@ func Load() (*Config, error) {
 	// Bind specific env vars
 	v.BindEnv("api_key", "GROQ_API_KEY")
 	v.BindEnv("model", "GROQ_MODEL")
+	v.BindEnv("moonshot_api_key", "MOONSHOT_API_KEY")
+	v.BindEnv("openai_api_key", "OPENAI_API_KEY")
 
 	// Read config file (optional)
 	if err := v.ReadInConfig(); err != nil {

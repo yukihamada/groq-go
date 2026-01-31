@@ -14,14 +14,20 @@ const (
 	DefaultBaseURL = "https://api.groq.com/openai/v1"
 	DefaultModel   = "llama-3.3-70b-versatile"
 	DefaultTimeout = 120 * time.Second
+
+	// Provider base URLs
+	GroqBaseURL     = "https://api.groq.com/openai/v1"
+	MoonshotBaseURL = "https://api.moonshot.cn/v1"
+	OpenAIBaseURL   = "https://api.openai.com/v1"
 )
 
-// Client is the Groq API client
+// Client is the API client supporting multiple providers
 type Client struct {
-	baseURL    string
-	apiKey     string
-	model      string
-	httpClient *http.Client
+	baseURL      string
+	apiKey       string
+	model        string
+	httpClient   *http.Client
+	providerKeys map[string]string // provider -> apiKey
 }
 
 // Option is a function that configures the client
@@ -48,7 +54,17 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
-// New creates a new Groq API client
+// WithProviderKey sets an API key for a specific provider
+func WithProviderKey(provider, apiKey string) Option {
+	return func(c *Client) {
+		if c.providerKeys == nil {
+			c.providerKeys = make(map[string]string)
+		}
+		c.providerKeys[provider] = apiKey
+	}
+}
+
+// New creates a new API client
 func New(apiKey string, opts ...Option) *Client {
 	c := &Client{
 		baseURL: DefaultBaseURL,
@@ -57,11 +73,45 @@ func New(apiKey string, opts ...Option) *Client {
 		httpClient: &http.Client{
 			Timeout: DefaultTimeout,
 		},
+		providerKeys: make(map[string]string),
 	}
+	// Default Groq key
+	c.providerKeys["groq"] = apiKey
+
 	for _, opt := range opts {
 		opt(c)
 	}
 	return c
+}
+
+// getProviderConfig returns baseURL and apiKey for the current model
+func (c *Client) getProviderConfig() (baseURL, apiKey string) {
+	switch {
+	case isKimiModel(c.model):
+		return MoonshotBaseURL, c.providerKeys["moonshot"]
+	case isOpenAIModel(c.model):
+		return OpenAIBaseURL, c.providerKeys["openai"]
+	default:
+		return GroqBaseURL, c.providerKeys["groq"]
+	}
+}
+
+func isKimiModel(model string) bool {
+	// Kimi K2 is available on Groq, so return false
+	// Only use Moonshot API for moonshot-specific models
+	switch model {
+	case "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k":
+		return true
+	}
+	return false
+}
+
+func isOpenAIModel(model string) bool {
+	switch model {
+	case "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo":
+		return true
+	}
+	return false
 }
 
 // Model returns the current model
@@ -76,6 +126,11 @@ func (c *Client) SetModel(model string) {
 
 // ChatCompletion sends a non-streaming chat completion request
 func (c *Client) ChatCompletion(ctx context.Context, messages []Message, tools []Tool) (*ChatCompletionResponse, error) {
+	baseURL, apiKey := c.getProviderConfig()
+	if apiKey == "" {
+		return nil, fmt.Errorf("no API key configured for model %s", c.model)
+	}
+
 	req := ChatCompletionRequest{
 		Model:    c.model,
 		Messages: messages,
@@ -92,13 +147,13 @@ func (c *Client) ChatCompletion(ctx context.Context, messages []Message, tools [
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/chat/completions", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
@@ -129,6 +184,11 @@ func (c *Client) ChatCompletion(ctx context.Context, messages []Message, tools [
 
 // ChatCompletionStream sends a streaming chat completion request
 func (c *Client) ChatCompletionStream(ctx context.Context, messages []Message, tools []Tool) (*StreamReader, error) {
+	baseURL, apiKey := c.getProviderConfig()
+	if apiKey == "" {
+		return nil, fmt.Errorf("no API key configured for model %s", c.model)
+	}
+
 	req := ChatCompletionRequest{
 		Model:    c.model,
 		Messages: messages,
@@ -145,13 +205,13 @@ func (c *Client) ChatCompletionStream(ctx context.Context, messages []Message, t
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/chat/completions", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 	httpReq.Header.Set("Accept", "text/event-stream")
 
 	resp, err := c.httpClient.Do(httpReq)

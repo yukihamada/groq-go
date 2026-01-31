@@ -4,11 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"groq-go/internal/client"
 	"groq-go/internal/config"
+	"groq-go/internal/knowledge"
 	"groq-go/internal/mcp"
+	"groq-go/internal/plugin"
 	"groq-go/internal/repl"
 	"groq-go/internal/tool"
 	"groq-go/internal/tool/tools"
@@ -34,12 +37,25 @@ func run() error {
 		return err
 	}
 
-	// Create API client
-	apiClient := client.New(cfg.APIKey, client.WithModel(cfg.Model))
+	// Create API client with provider keys
+	opts := []client.Option{client.WithModel(cfg.Model)}
+	if cfg.MoonshotKey != "" {
+		opts = append(opts, client.WithProviderKey("moonshot", cfg.MoonshotKey))
+	}
+	if cfg.OpenAIKey != "" {
+		opts = append(opts, client.WithProviderKey("openai", cfg.OpenAIKey))
+	}
+	apiClient := client.New(cfg.APIKey, opts...)
+
+	// Initialize knowledge base
+	kb, err := knowledge.NewKnowledgeBase(knowledge.DefaultKnowledgeDir())
+	if err != nil {
+		log.Printf("Warning: failed to initialize knowledge base: %v", err)
+	}
 
 	// Create tool registry and register built-in tools
 	registry := tool.NewRegistry()
-	registerTools(registry)
+	registerTools(registry, kb)
 
 	// Initialize MCP manager
 	mcpManager := mcp.NewManager()
@@ -61,9 +77,21 @@ func run() error {
 		}
 	}
 
+	// Initialize plugin manager
+	pluginManager, err := plugin.NewManager()
+	if err != nil {
+		log.Printf("Warning: failed to initialize plugin manager: %v", err)
+	} else {
+		// Register plugin tools
+		pluginToolCount := plugin.RegisterPluginTools(registry, pluginManager)
+		if pluginToolCount > 0 {
+			fmt.Fprintf(os.Stderr, "Loaded %d plugin tools\n", pluginToolCount)
+		}
+	}
+
 	// Start in web mode or CLI mode
 	if *webMode {
-		server := web.NewServer(apiClient, registry, *webAddr)
+		server := web.NewServer(apiClient, registry, kb, pluginManager, *webAddr)
 		return server.Start()
 	}
 
@@ -76,7 +104,7 @@ func run() error {
 	return r.Run()
 }
 
-func registerTools(registry *tool.Registry) {
+func registerTools(registry *tool.Registry, kb *knowledge.KnowledgeBase) {
 	registry.Register(tools.NewReadTool())
 	registry.Register(tools.NewWriteTool())
 	registry.Register(tools.NewEditTool())
@@ -85,4 +113,13 @@ func registerTools(registry *tool.Registry) {
 	registry.Register(tools.NewBashTool())
 	registry.Register(tools.NewWebFetchTool())
 	registry.Register(tools.NewBrowserTool())
+	registry.Register(tools.NewGitTool())
+	registry.Register(tools.NewImageGenTool())
+	registry.Register(tools.NewCodeExecTool())
+
+	// Knowledge base tools
+	if kb != nil {
+		registry.Register(tools.NewKnowledgeSearchTool(kb))
+		registry.Register(tools.NewKnowledgeListTool(kb))
+	}
 }

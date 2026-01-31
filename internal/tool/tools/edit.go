@@ -99,8 +99,34 @@ func (t *EditTool) Execute(ctx context.Context, argsJSON json.RawMessage) (tool.
 		return tool.NewErrorResult(fmt.Sprintf("failed to write file: %v", err)), nil
 	}
 
-	if args.ReplaceAll {
-		return tool.NewResult(fmt.Sprintf("Successfully replaced %d occurrences in %s", count, args.FilePath)), nil
+	// Build result with diff information for UI
+	result := EditResult{
+		FilePath:   args.FilePath,
+		OldContent: contentStr,
+		NewContent: newContent,
+		Count:      count,
+		ReplaceAll: args.ReplaceAll,
 	}
-	return tool.NewResult(fmt.Sprintf("Successfully edited %s", args.FilePath)), nil
+
+	resultJSON, _ := json.Marshal(result)
+
+	if args.ReplaceAll {
+		return tool.Result{
+			Content: fmt.Sprintf("Successfully replaced %d occurrences in %s\n---DIFF_DATA---\n%s", count, args.FilePath, string(resultJSON)),
+			IsError: false,
+		}, nil
+	}
+	return tool.Result{
+		Content: fmt.Sprintf("Successfully edited %s\n---DIFF_DATA---\n%s", args.FilePath, string(resultJSON)),
+		IsError: false,
+	}, nil
+}
+
+// EditResult contains diff information for the UI
+type EditResult struct {
+	FilePath   string `json:"file_path"`
+	OldContent string `json:"old_content"`
+	NewContent string `json:"new_content"`
+	Count      int    `json:"count"`
+	ReplaceAll bool   `json:"replace_all"`
 }

@@ -4,10 +4,40 @@ import "encoding/json"
 
 // Message represents a chat message
 type Message struct {
-	Role       string     `json:"role"`
-	Content    string     `json:"content,omitempty"`
-	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string     `json:"tool_call_id,omitempty"`
+	Role       string      `json:"role"`
+	Content    any         `json:"content,omitempty"` // string or []ContentPart for vision
+	ToolCalls  []ToolCall  `json:"tool_calls,omitempty"`
+	ToolCallID string      `json:"tool_call_id,omitempty"`
+}
+
+// ContentPart represents a part of multimodal content
+type ContentPart struct {
+	Type     string    `json:"type"` // "text" or "image_url"
+	Text     string    `json:"text,omitempty"`
+	ImageURL *ImageURL `json:"image_url,omitempty"`
+}
+
+// ImageURL represents an image URL for vision models
+type ImageURL struct {
+	URL    string `json:"url"` // Can be URL or base64 data URI
+	Detail string `json:"detail,omitempty"` // "low", "high", or "auto"
+}
+
+// NewTextMessage creates a simple text message
+func NewTextMessage(role, content string) Message {
+	return Message{Role: role, Content: content}
+}
+
+// NewVisionMessage creates a message with text and images
+func NewVisionMessage(role, text string, imageURLs ...string) Message {
+	parts := []ContentPart{{Type: "text", Text: text}}
+	for _, url := range imageURLs {
+		parts = append(parts, ContentPart{
+			Type:     "image_url",
+			ImageURL: &ImageURL{URL: url, Detail: "auto"},
+		})
+	}
+	return Message{Role: role, Content: parts}
 }
 
 // ToolCall represents a tool call from the assistant
