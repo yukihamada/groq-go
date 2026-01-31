@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>groq-go - AI CLI Assistant powered by Groq</title>
+    <meta name="description" content="A powerful CLI AI assistant for software engineering, powered by Groq's ultra-fast LLM API">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-card: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent: #a855f7;
+            --accent-hover: #9333ea;
+            --green: #22c55e;
+            --border: #2a2a2a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        header {
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .github-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .github-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 14px 28px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+        }
+
+        /* Terminal Demo */
+        .terminal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 800px;
+            margin: 60px auto;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: var(--bg-card);
+            padding: 12px 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f57; }
+        .terminal-dot.yellow { background: #febc2e; }
+        .terminal-dot.green { background: #28c840; }
+
+        .terminal-body {
+            padding: 20px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .terminal-line {
+            margin-bottom: 8px;
+        }
+
+        .prompt {
+            color: var(--green);
+        }
+
+        .command {
+            color: var(--text-primary);
+        }
+
+        .output {
+            color: var(--text-secondary);
+        }
+
+        .tool {
+            color: var(--accent);
+        }
+
+        /* Features */
+        .features {
+            padding: 80px 0;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 60px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+        }
+
+        /* Installation */
+        .installation {
+            padding: 80px 0;
+            background: var(--bg-secondary);
+        }
+
+        .installation h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+        }
+
+        .install-steps {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .install-step {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .install-step h4 {
+            color: var(--accent);
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .install-step code {
+            background: var(--bg-primary);
+            padding: 12px 16px;
+            border-radius: 6px;
+            display: block;
+            font-family: 'SF Mono', monospace;
+            overflow-x: auto;
+        }
+
+        /* Tools Section */
+        .tools {
+            padding: 80px 0;
+        }
+
+        .tools h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 60px;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .tool-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .tool-item h4 {
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .tool-item p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">🚀 groq<span>-go</span></a>
+                <ul class="nav-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#installation">Installation</a></li>
+                    <li><a href="#tools">Tools</a></li>
+                </ul>
+                <a href="https://github.com/yukihamada/groq-go" class="github-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    GitHub
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1>AI-Powered CLI Assistant</h1>
+                <p>Build faster with groq-go. A powerful command-line AI assistant powered by Groq's ultra-fast LLM API. Read, write, edit files, browse the web, and execute commands.</p>
+                <div class="hero-buttons">
+                    <a href="#installation" class="btn-primary">Get Started</a>
+                    <a href="https://github.com/yukihamada/groq-go" class="btn-secondary">View on GitHub</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="container">
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                </div>
+                <div class="terminal-body">
+                    <div class="terminal-line">
+                        <span class="prompt">$</span> <span class="command">groq-go</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="output">groq-go</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="output">Model: llama-3.3-70b-versatile</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="prompt">&gt;</span> <span class="command">Create a hello world web server in Go</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="tool">● Write</span> <span class="output">.../server/main.go</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="output" style="color: #22c55e;">  ✓ Successfully wrote 245 bytes</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="output">I've created a simple HTTP server at server/main.go...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h2>Features</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Ultra-Fast Responses</h3>
+                        <p>Powered by Groq's LPU technology for incredibly fast inference. Get responses in milliseconds.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛠️</div>
+                        <h3>8 Built-in Tools</h3>
+                        <p>Read, Write, Edit, Glob, Grep, Bash, WebFetch, and Browser tools for complete control.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🌐</div>
+                        <h3>Web Browsing</h3>
+                        <p>Fetch web content, take screenshots, and browse JavaScript-rendered pages with Playwright.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔌</div>
+                        <h3>MCP Support</h3>
+                        <p>Extend functionality with Model Context Protocol servers for custom integrations.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💬</div>
+                        <h3>Interactive REPL</h3>
+                        <p>Conversational interface with history, slash commands, and streaming responses.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔧</div>
+                        <h3>Written in Go</h3>
+                        <p>Single binary, fast startup, cross-platform. No runtime dependencies required.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="installation" class="installation">
+            <div class="container">
+                <h2>Installation</h2>
+                <div class="install-steps">
+                    <div class="install-step">
+                        <h4>Step 1: Clone the repository</h4>
+                        <code>git clone https://github.com/yukihamada/groq-go.git && cd groq-go</code>
+                    </div>
+                    <div class="install-step">
+                        <h4>Step 2: Build</h4>
+                        <code>make build</code>
+                    </div>
+                    <div class="install-step">
+                        <h4>Step 3: Set your API key</h4>
+                        <code>export GROQ_API_KEY="your-api-key"</code>
+                    </div>
+                    <div class="install-step">
+                        <h4>Step 4: Run</h4>
+                        <code>./bin/groq-go</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tools" class="tools">
+            <div class="container">
+                <h2>Available Tools</h2>
+                <div class="tools-grid">
+                    <div class="tool-item">
+                        <h4>📖 Read</h4>
+                        <p>Read files with line numbers</p>
+                    </div>
+                    <div class="tool-item">
+                        <h4>✏️ Write</h4>
+                        <p>Create or overwrite files</p>
+                    </div>
+                    <div class="tool-item">
+                        <h4>🔧 Edit</h4>
+                        <p>Replace text in files</p>
+                    </div>
+                    <div class="tool-item">
+                        <h4>🔍 Glob</h4>
+                        <p>Find files by pattern</p>
+                    </div>
+                    <div class="tool-item">
+                        <h4>🔎 Grep</h4>
+                        <p>Search file contents</p>
+                    </div>
+                    <div class="tool-item">
+                        <h4>💻 Bash</h4>
+                        <p>Execute shell commands</p>
+                    </div>
+                    <div class="tool-item">
+                        <h4>🌐 WebFetch</h4>
+                        <p>Fetch web content</p>
+                    </div>
+                    <div class="tool-item">
+                        <h4>🖥️ Browser</h4>
+                        <p>Screenshots & JS rendering</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Made with ❤️ by <a href="https://yukihamada.jp">Yuki Hamada</a> | <a href="https://github.com/yukihamada/groq-go">GitHub</a></p>
+        </div>
+    </footer>
+</body>
+</html>
