@@ -30,9 +30,23 @@ export GROQ_MODEL="llama-3.1-8b-instant"
 
 ## Usage
 
+### CLI Mode
+
 ```bash
 ./bin/groq-go
 ```
+
+### Web Mode
+
+```bash
+./bin/groq-go -web
+```
+
+Then open http://localhost:8080 in your browser.
+
+Options:
+- `-web` - Start web server instead of CLI
+- `-addr :3000` - Custom port (default: :8080)
 
 ### Commands
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 
@@ -11,6 +12,7 @@ import (
 	"groq-go/internal/repl"
 	"groq-go/internal/tool"
 	"groq-go/internal/tool/tools"
+	"groq-go/internal/web"
 )
 
 func main() {
@@ -21,6 +23,11 @@ func main() {
 }
 
 func run() error {
+	// Parse flags
+	webMode := flag.Bool("web", false, "Start web server instead of CLI")
+	webAddr := flag.String("addr", ":8080", "Web server address")
+	flag.Parse()
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -52,6 +59,12 @@ func run() error {
 		if mcpToolCount > 0 {
 			fmt.Fprintf(os.Stderr, "Loaded %d MCP tools from %d servers\n", mcpToolCount, mcpManager.ServerCount())
 		}
+	}
+
+	// Start in web mode or CLI mode
+	if *webMode {
+		server := web.NewServer(apiClient, registry, *webAddr)
+		return server.Start()
 	}
 
 	// Create and run REPL
