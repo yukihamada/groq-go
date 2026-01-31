@@ -1,4 +1,5 @@
 # Binaries
+groq-go
 bin/
 *.exe
 *.exe~
