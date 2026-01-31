@@ -48,12 +48,13 @@ func NewServer(c *client.Client, registry *tool.Registry, addr string) *Server {
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
-	// Serve static files
+	// Serve static files with proper headers
 	staticFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
 		return err
 	}
-	mux.Handle("/", http.FileServer(http.FS(staticFS)))
+	fileServer := http.FileServer(http.FS(staticFS))
+	mux.Handle("/", addSecurityHeaders(fileServer))
 
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
@@ -65,15 +66,21 @@ func (s *Server) Start() error {
 	return http.ListenAndServe(s.addr, mux)
 }
 
-// WebSocket message types
+// WSMessage represents WebSocket message types
 type WSMessage struct {
-	Type    string          `json:"type"`
-	Content string          `json:"content,omitempty"`
-	Tool    string          `json:"tool,omitempty"`
-	Args    string          `json:"args,omitempty"`
-	Result  string          `json:"result,omitempty"`
-	Error   string          `json:"error,omitempty"`
-	Model   string          `json:"model,omitempty"`
+	Type    string `json:"type"`
+	Content string `json:"content,omitempty"`
+	Tool    string `json:"tool,omitempty"`
+	Args    string `json:"args,omitempty"`
+	Result  string `json:"result,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Model   string `json:"model,omitempty"`
+}
+
+// Store for tracking tool call args
+type toolCallInfo struct {
+	name string
+	args string
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -184,10 +191,11 @@ func (s *Server) handleChat(conn *websocket.Conn, userMessage string, history *[
 				// Execute tool
 				result, _ := s.executor.ExecuteToolCall(ctx, tc)
 
-				// Send tool result
+				// Send tool result with args for file tracking
 				s.sendMessage(conn, WSMessage{
 					Type:   "tool_result",
 					Tool:   tc.Function.Name,
+					Args:   tc.Function.Arguments,
 					Result: result.Content,
 					Error:  boolToError(result.IsError),
 				})
@@ -334,4 +342,13 @@ func boolToError(isError bool) string {
 		return "true"
 	}
 	return ""
+}
+
+// addSecurityHeaders wraps a handler to add security headers
+func addSecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow inline scripts and styles for the app
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:;")
+		next.ServeHTTP(w, r)
+	})
 }

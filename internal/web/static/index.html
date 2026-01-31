@@ -38,16 +38,17 @@
 
         /* Header */
         header {
-            padding: 16px 24px;
+            padding: 12px 20px;
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: var(--bg-secondary);
+            flex-shrink: 0;
         }
 
         .logo {
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 700;
             display: flex;
             align-items: center;
@@ -64,41 +65,26 @@
             align-items: center;
         }
 
-        select {
+        select, .btn {
             background: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-primary);
             padding: 8px 12px;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
-        }
-
-        select:hover {
-            border-color: var(--accent);
-        }
-
-        .btn {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
             transition: all 0.2s;
         }
 
-        .btn:hover {
+        select:hover, .btn:hover {
             border-color: var(--accent);
-            background: var(--bg-input);
         }
 
         .status {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 14px;
+            font-size: 13px;
             color: var(--text-secondary);
         }
 
@@ -113,21 +99,194 @@
             background: var(--green);
         }
 
-        /* Chat Container */
+        /* Main Layout */
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            min-width: 400px;
+        }
+
+        .chat-panel.full-width {
+            border-right: none;
+        }
+
         .chat-container {
             flex: 1;
             overflow-y: auto;
-            padding: 24px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
         }
 
-        .message {
-            max-width: 85%;
+        /* Preview Panel */
+        .preview-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            min-width: 400px;
+        }
+
+        .preview-panel.hidden {
+            display: none;
+        }
+
+        .preview-header {
             padding: 12px 16px;
-            border-radius: 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+        }
+
+        .preview-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .preview-tab {
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .preview-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-input);
+        }
+
+        .preview-tab.active {
+            color: var(--text-primary);
+            background: var(--accent);
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
+        .preview-code {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            padding: 16px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
             line-height: 1.6;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .preview-code.active {
+            display: block;
+        }
+
+        .preview-iframe-container {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .preview-iframe-container.active {
+            display: block;
+        }
+
+        .preview-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            gap: 12px;
+        }
+
+        .preview-empty-icon {
+            font-size: 3rem;
+            opacity: 0.5;
+        }
+
+        /* File List */
+        .file-list {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            padding: 4px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            border-color: var(--accent);
+        }
+
+        .file-item.active {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+        }
+
+        .file-item .close {
+            opacity: 0.5;
+            cursor: pointer;
+        }
+
+        .file-item .close:hover {
+            opacity: 1;
+        }
+
+        /* Messages */
+        .message {
+            max-width: 90%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 14px;
         }
 
         .message.user {
@@ -149,24 +308,24 @@
             border: 1px solid var(--border);
             color: var(--text-secondary);
             align-self: center;
-            font-size: 14px;
-            padding: 8px 16px;
+            font-size: 13px;
+            padding: 6px 14px;
         }
 
         .message.tool {
             background: var(--bg-secondary);
             border-left: 3px solid var(--accent);
             font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 13px;
+            font-size: 12px;
             align-self: flex-start;
-            max-width: 90%;
+            max-width: 95%;
         }
 
         .tool-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             color: var(--accent);
             font-weight: 600;
         }
@@ -175,35 +334,29 @@
             color: var(--text-secondary);
             white-space: pre-wrap;
             overflow-x: auto;
-            max-height: 200px;
+            max-height: 150px;
             overflow-y: auto;
         }
 
-        .tool-result.error {
-            color: var(--red);
-        }
+        .tool-result.error { color: var(--red); }
+        .tool-result.success { color: var(--green); }
 
-        .tool-result.success {
-            color: var(--green);
-        }
-
-        /* Code blocks */
         .message pre {
             background: var(--bg-primary);
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
             overflow-x: auto;
             margin: 8px 0;
             font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .message code {
             background: var(--bg-primary);
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 2px 5px;
+            border-radius: 3px;
             font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .message pre code {
@@ -215,7 +368,7 @@
         .typing {
             display: flex;
             gap: 4px;
-            padding: 12px 16px;
+            padding: 10px 14px;
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -224,8 +377,8 @@
         }
 
         .typing span {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             background: var(--text-secondary);
             border-radius: 50%;
             animation: bounce 1.4s infinite ease-in-out;
@@ -241,16 +394,14 @@
 
         /* Input Area */
         .input-area {
-            padding: 16px 24px;
+            padding: 12px 16px;
             border-top: 1px solid var(--border);
             background: var(--bg-secondary);
         }
 
         .input-wrapper {
             display: flex;
-            gap: 12px;
-            max-width: 1200px;
-            margin: 0 auto;
+            gap: 10px;
         }
 
         #message-input {
@@ -258,12 +409,12 @@
             background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text-primary);
-            padding: 12px 16px;
+            padding: 10px 14px;
             border-radius: 8px;
-            font-size: 15px;
+            font-size: 14px;
             resize: none;
-            min-height: 48px;
-            max-height: 200px;
+            min-height: 44px;
+            max-height: 150px;
             font-family: inherit;
         }
 
@@ -280,10 +431,10 @@
             background: var(--accent);
             border: none;
             color: white;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             transition: all 0.2s;
         }
@@ -298,6 +449,29 @@
             cursor: not-allowed;
         }
 
+        /* Toggle Button */
+        .toggle-preview {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toggle-preview:hover {
+            border-color: var(--accent);
+        }
+
+        .toggle-preview.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
         /* Empty state */
         .empty-state {
             flex: 1;
@@ -306,17 +480,19 @@
             align-items: center;
             justify-content: center;
             color: var(--text-secondary);
-            gap: 16px;
+            gap: 12px;
+            padding: 20px;
         }
 
         .empty-state h2 {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             color: var(--text-primary);
         }
 
         .empty-state p {
-            max-width: 400px;
+            max-width: 350px;
             text-align: center;
+            font-size: 14px;
         }
 
         .suggestions {
@@ -324,17 +500,17 @@
             flex-wrap: wrap;
             gap: 8px;
             justify-content: center;
-            margin-top: 16px;
+            margin-top: 12px;
         }
 
         .suggestion {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 20px;
             cursor: pointer;
             transition: all 0.2s;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .suggestion:hover {
@@ -343,64 +519,92 @@
         }
 
         /* Responsive */
-        @media (max-width: 768px) {
-            header {
-                padding: 12px 16px;
+        @media (max-width: 900px) {
+            .main-container {
+                flex-direction: column;
             }
 
-            .chat-container {
-                padding: 16px;
+            .chat-panel, .preview-panel {
+                min-width: 100%;
+                border-right: none;
             }
 
-            .message {
-                max-width: 95%;
-            }
-
-            .input-area {
-                padding: 12px 16px;
+            .preview-panel {
+                border-top: 1px solid var(--border);
+                max-height: 50vh;
             }
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="logo">🚀 groq<span>-go</span> web</div>
+        <div class="logo">🚀 groq<span>-go</span></div>
         <div class="header-actions">
             <div class="status">
                 <div class="status-dot" id="status-dot"></div>
-                <span id="status-text">Disconnected</span>
+                <span id="status-text">Connecting...</span>
             </div>
             <select id="model-select">
-                <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
-                <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
-                <option value="llama-3.2-90b-vision-preview">llama-3.2-90b-vision-preview</option>
-                <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+                <option value="llama-3.3-70b-versatile">llama-3.3-70b</option>
+                <option value="llama-3.1-8b-instant">llama-3.1-8b</option>
+                <option value="mixtral-8x7b-32768">mixtral-8x7b</option>
             </select>
+            <button class="toggle-preview" id="toggle-preview" onclick="togglePreview()">
+                📺 Preview
+            </button>
             <button class="btn" onclick="clearChat()">Clear</button>
         </div>
     </header>
 
-    <div class="chat-container" id="chat-container">
-        <div class="empty-state" id="empty-state">
-            <h2>👋 Welcome to groq-go</h2>
-            <p>AI-powered CLI assistant in your browser. Ask me to read files, write code, search the web, or run commands.</p>
-            <div class="suggestions">
-                <div class="suggestion" onclick="sendSuggestion('List all files in the current directory')">📁 List files</div>
-                <div class="suggestion" onclick="sendSuggestion('What\\'s the top story on Hacker News?')">📰 Hacker News</div>
-                <div class="suggestion" onclick="sendSuggestion('Create a simple hello world in Python')">🐍 Hello Python</div>
-                <div class="suggestion" onclick="sendSuggestion('Take a screenshot of https://example.com')">📸 Screenshot</div>
+    <div class="main-container">
+        <div class="chat-panel" id="chat-panel">
+            <div class="chat-container" id="chat-container">
+                <div class="empty-state" id="empty-state">
+                    <h2>👋 Welcome to groq-go</h2>
+                    <p>AI assistant in your browser. Create websites, apps, and more!</p>
+                    <div class="suggestions">
+                        <div class="suggestion" onclick="sendSuggestion('Create a simple landing page for a coffee shop')">☕ Coffee Shop</div>
+                        <div class="suggestion" onclick="sendSuggestion('Create a todo list app with HTML, CSS, and JavaScript')">📝 Todo App</div>
+                        <div class="suggestion" onclick="sendSuggestion('Create a calculator with a nice UI')">🧮 Calculator</div>
+                        <div class="suggestion" onclick="sendSuggestion('Create a weather widget')">🌤️ Weather</div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea
+                        id="message-input"
+                        placeholder="Describe what you want to create..."
+                        rows="1"
+                    ></textarea>
+                    <button id="send-btn" onclick="sendMessage()">Send</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="input-area">
-        <div class="input-wrapper">
-            <textarea
-                id="message-input"
-                placeholder="Ask me anything... (Press Enter to send, Shift+Enter for new line)"
-                rows="1"
-            ></textarea>
-            <button id="send-btn" onclick="sendMessage()">Send</button>
+        <div class="preview-panel hidden" id="preview-panel">
+            <div class="preview-header">
+                <div class="preview-tabs">
+                    <button class="preview-tab active" onclick="switchPreviewTab('preview')">Preview</button>
+                    <button class="preview-tab" onclick="switchPreviewTab('code')">Code</button>
+                </div>
+                <div class="preview-actions">
+                    <button class="btn" onclick="refreshPreview()">↻ Refresh</button>
+                    <button class="btn" onclick="openInNewTab()">↗ Open</button>
+                </div>
+            </div>
+            <div class="file-list" id="file-list"></div>
+            <div class="preview-content">
+                <div class="preview-iframe-container active" id="preview-iframe-container">
+                    <iframe class="preview-iframe" id="preview-iframe" sandbox="allow-scripts allow-forms"></iframe>
+                </div>
+                <pre class="preview-code" id="preview-code"></pre>
+                <div class="preview-empty" id="preview-empty">
+                    <div class="preview-empty-icon">📄</div>
+                    <div>No files yet</div>
+                    <div style="font-size: 12px;">Ask me to create something!</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -408,6 +612,10 @@
         let ws;
         let isConnected = false;
         let currentAssistantMessage = null;
+        let previewVisible = false;
+        let files = new Map(); // filename -> content
+        let currentFile = null;
+        let currentTab = 'preview';
 
         const chatContainer = document.getElementById('chat-container');
         const emptyState = document.getElementById('empty-state');
@@ -416,10 +624,17 @@
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
         const modelSelect = document.getElementById('model-select');
+        const previewPanel = document.getElementById('preview-panel');
+        const chatPanel = document.getElementById('chat-panel');
+        const previewIframe = document.getElementById('preview-iframe');
+        const previewCode = document.getElementById('preview-code');
+        const fileList = document.getElementById('file-list');
+        const previewEmpty = document.getElementById('preview-empty');
+        const toggleBtn = document.getElementById('toggle-preview');
 
         function connect() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+            ws = new WebSocket(protocol + '//' + window.location.host + '/ws');
 
             ws.onopen = () => {
                 isConnected = true;
@@ -433,7 +648,6 @@
                 statusDot.classList.remove('connected');
                 statusText.textContent = 'Disconnected';
                 sendBtn.disabled = true;
-                // Reconnect after 3 seconds
                 setTimeout(connect, 3000);
             };
 
@@ -469,11 +683,12 @@
 
                 case 'tool_result':
                     addToolResult(msg.tool, msg.result, msg.error);
+                    // Check if a file was created/modified
+                    checkForFileChanges(msg.tool, msg.args, msg.result);
                     break;
 
                 case 'done':
                     if (currentAssistantMessage) {
-                        // Format markdown-like content
                         currentAssistantMessage.innerHTML = formatContent(currentAssistantMessage.textContent);
                     }
                     currentAssistantMessage = null;
@@ -485,6 +700,122 @@
                     hideTyping();
                     currentAssistantMessage = null;
                     break;
+            }
+        }
+
+        function checkForFileChanges(tool, argsStr, result) {
+            if (tool === 'Write' && result && !result.startsWith('Error')) {
+                try {
+                    const args = JSON.parse(argsStr);
+                    const filePath = args.file_path;
+                    const content = args.content;
+                    if (filePath && content) {
+                        const fileName = filePath.split('/').pop();
+                        files.set(fileName, { path: filePath, content: content });
+                        updateFileList();
+
+                        // Auto-show preview if it's an HTML file
+                        if (fileName.endsWith('.html')) {
+                            if (!previewVisible) togglePreview();
+                            selectFile(fileName);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing file:', e);
+                }
+            }
+        }
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            previewEmpty.style.display = files.size === 0 ? 'flex' : 'none';
+
+            files.forEach((data, name) => {
+                const item = document.createElement('div');
+                item.className = 'file-item' + (currentFile === name ? ' active' : '');
+                item.innerHTML = getFileIcon(name) + ' ' + name;
+                item.onclick = () => selectFile(name);
+                fileList.appendChild(item);
+            });
+        }
+
+        function getFileIcon(filename) {
+            if (filename.endsWith('.html')) return '📄';
+            if (filename.endsWith('.css')) return '🎨';
+            if (filename.endsWith('.js')) return '⚡';
+            if (filename.endsWith('.json')) return '📋';
+            return '📁';
+        }
+
+        function selectFile(filename) {
+            currentFile = filename;
+            updateFileList();
+
+            const fileData = files.get(filename);
+            if (!fileData) return;
+
+            previewCode.textContent = fileData.content;
+
+            if (filename.endsWith('.html')) {
+                previewIframe.srcdoc = fileData.content;
+            } else if (filename.endsWith('.css') || filename.endsWith('.js')) {
+                // For CSS/JS, try to find associated HTML
+                let htmlFile = null;
+                files.forEach((data, name) => {
+                    if (name.endsWith('.html')) htmlFile = name;
+                });
+                if (htmlFile) {
+                    selectFile(htmlFile);
+                    return;
+                }
+            }
+
+            updatePreviewDisplay();
+        }
+
+        function updatePreviewDisplay() {
+            const iframeContainer = document.getElementById('preview-iframe-container');
+
+            if (currentTab === 'preview') {
+                iframeContainer.classList.add('active');
+                previewCode.classList.remove('active');
+            } else {
+                iframeContainer.classList.remove('active');
+                previewCode.classList.add('active');
+            }
+        }
+
+        function switchPreviewTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.preview-tab:' + (tab === 'preview' ? 'first-child' : 'last-child')).classList.add('active');
+            updatePreviewDisplay();
+        }
+
+        function togglePreview() {
+            previewVisible = !previewVisible;
+            previewPanel.classList.toggle('hidden', !previewVisible);
+            chatPanel.classList.toggle('full-width', !previewVisible);
+            toggleBtn.classList.toggle('active', previewVisible);
+        }
+
+        function refreshPreview() {
+            if (currentFile) {
+                const fileData = files.get(currentFile);
+                if (fileData && currentFile.endsWith('.html')) {
+                    previewIframe.srcdoc = fileData.content;
+                }
+            }
+        }
+
+        function openInNewTab() {
+            if (currentFile) {
+                const fileData = files.get(currentFile);
+                if (fileData) {
+                    const blob = new Blob([fileData.content], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                }
             }
         }
 
@@ -515,11 +846,16 @@
             chatContainer.innerHTML = '';
             emptyState.style.display = 'flex';
             chatContainer.appendChild(emptyState);
+            files.clear();
+            currentFile = null;
+            updateFileList();
+            previewIframe.srcdoc = '';
+            previewCode.textContent = '';
         }
 
         function addMessage(content, role) {
             const div = document.createElement('div');
-            div.className = `message ${role}`;
+            div.className = 'message ' + role;
             div.innerHTML = formatContent(content);
             chatContainer.appendChild(div);
             scrollToBottom();
@@ -537,10 +873,7 @@
         function addToolCall(tool, args) {
             const div = document.createElement('div');
             div.className = 'message tool';
-            div.innerHTML = `
-                <div class="tool-header">● ${escapeHtml(tool)}</div>
-                <div class="tool-result">${formatArgs(args)}</div>
-            `;
+            div.innerHTML = '<div class="tool-header">● ' + escapeHtml(tool) + '</div><div class="tool-result">' + formatArgs(args) + '</div>';
             chatContainer.appendChild(div);
             scrollToBottom();
         }
@@ -550,10 +883,7 @@
             div.className = 'message tool';
             const resultClass = error ? 'error' : 'success';
             const icon = error ? '✗' : '✓';
-            div.innerHTML = `
-                <div class="tool-header">${icon} ${escapeHtml(tool)}</div>
-                <div class="tool-result ${resultClass}">${escapeHtml(truncate(result, 500))}</div>
-            `;
+            div.innerHTML = '<div class="tool-header">' + icon + ' ' + escapeHtml(tool) + '</div><div class="tool-result ' + resultClass + '">' + escapeHtml(truncate(result, 300)) + '</div>';
             chatContainer.appendChild(div);
             scrollToBottom();
         }
@@ -587,38 +917,29 @@
         }
 
         function formatContent(text) {
-            // Simple markdown-like formatting
             let html = escapeHtml(text);
-
-            // Code blocks
             html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
-
-            // Inline code
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-            // Bold
             html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-            // Line breaks
             html = html.replace(/\n/g, '<br>');
-
             return html;
         }
 
         function formatArgs(args) {
             try {
                 const parsed = JSON.parse(args);
-                if (parsed.command) return escapeHtml(parsed.command);
-                if (parsed.file_path) return escapeHtml(parsed.file_path);
+                if (parsed.command) return escapeHtml(truncate(parsed.command, 100));
+                if (parsed.file_path) return escapeHtml(parsed.file_path.split('/').pop());
                 if (parsed.pattern) return escapeHtml(parsed.pattern);
                 if (parsed.url) return escapeHtml(parsed.url);
-                return escapeHtml(JSON.stringify(parsed, null, 2));
-            } catch {
-                return escapeHtml(args);
+                return escapeHtml(truncate(JSON.stringify(parsed), 100));
+            } catch (e) {
+                return escapeHtml(truncate(args, 100));
             }
         }
 
         function truncate(text, maxLength) {
+            if (!text) return '';
             if (text.length <= maxLength) return text;
             return text.substring(0, maxLength) + '...';
         }
@@ -633,7 +954,7 @@
 
         messageInput.addEventListener('input', () => {
             messageInput.style.height = 'auto';
-            messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
+            messageInput.style.height = Math.min(messageInput.scrollHeight, 150) + 'px';
         });
 
         modelSelect.addEventListener('change', () => {
@@ -643,7 +964,7 @@
             }));
         });
 
-        // Connect on load
+        // Initialize
         connect();
     </script>
 </body>
