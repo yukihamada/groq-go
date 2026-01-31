@@ -13,6 +13,7 @@ import (
 	"groq-go/internal/mcp"
 	"groq-go/internal/plugin"
 	"groq-go/internal/repl"
+	"groq-go/internal/selfimprove"
 	"groq-go/internal/tool"
 	"groq-go/internal/tool/tools"
 	"groq-go/internal/web"
@@ -53,9 +54,28 @@ func run() error {
 		log.Printf("Warning: failed to initialize knowledge base: %v", err)
 	}
 
+	// Initialize self-improvement manager
+	var selfImproveManager *selfimprove.Manager
+	if os.Getenv("GITHUB_TOKEN") != "" {
+		selfImproveManager, err = selfimprove.NewManager()
+		if err != nil {
+			log.Printf("Warning: failed to initialize self-improve manager: %v", err)
+		} else {
+			// Initialize repo in background
+			go func() {
+				ctx := context.Background()
+				if err := selfImproveManager.Init(ctx); err != nil {
+					log.Printf("Warning: failed to init self-improve repo: %v", err)
+				} else {
+					log.Printf("Self-improvement repo initialized at %s", selfImproveManager.GetRepoDir())
+				}
+			}()
+		}
+	}
+
 	// Create tool registry and register built-in tools
 	registry := tool.NewRegistry()
-	registerTools(registry, kb)
+	registerTools(registry, kb, selfImproveManager)
 
 	// Initialize MCP manager
 	mcpManager := mcp.NewManager()
@@ -104,7 +124,7 @@ func run() error {
 	return r.Run()
 }
 
-func registerTools(registry *tool.Registry, kb *knowledge.KnowledgeBase) {
+func registerTools(registry *tool.Registry, kb *knowledge.KnowledgeBase, sim *selfimprove.Manager) {
 	registry.Register(tools.NewReadTool())
 	registry.Register(tools.NewWriteTool())
 	registry.Register(tools.NewEditTool())
@@ -121,5 +141,10 @@ func registerTools(registry *tool.Registry, kb *knowledge.KnowledgeBase) {
 	if kb != nil {
 		registry.Register(tools.NewKnowledgeSearchTool(kb))
 		registry.Register(tools.NewKnowledgeListTool(kb))
+	}
+
+	// Self-improvement tool
+	if sim != nil {
+		registry.Register(tools.NewSelfImproveTool(sim))
 	}
 }
