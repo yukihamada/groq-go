@@ -1662,8 +1662,8 @@
                 <div id="header-menu" class="header-menu" style="display: none;">
                     <div class="menu-section">
                         <div class="menu-label">モード</div>
-                        <button onclick="changeMode('tools'); toggleMenu();" id="mode-tools" class="menu-item active">🔧 ツール</button>
-                        <button onclick="changeMode('improve'); toggleMenu();" id="mode-improve" class="menu-item">🚀 改善</button>
+                        <button onclick="changeMode('tools'); toggleMenu();" id="mode-tools" class="menu-item">🔧 ツール</button>
+                        <button onclick="changeMode('improve'); toggleMenu();" id="mode-improve" class="menu-item active">🚀 改善</button>
                     </div>
                     <div class="menu-divider"></div>
                     <button onclick="shareConversation(); toggleMenu();" class="menu-item">📤 共有</button>
@@ -1769,7 +1769,7 @@
         let isRecording = false;
         let sidebarVisible = false;
         let pendingImages = []; // Base64 images to send with next message
-        let currentMode = 'tools'; // 'tools' or 'improve'
+        let currentMode = 'improve'; // 'tools' or 'improve' - default to improve mode
 
         // ================== DOM Elements ==================
         const chatContainer = document.getElementById('chat-container');
