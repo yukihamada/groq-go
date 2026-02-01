@@ -7,7 +7,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o groq-go .
 
-FROM alpine:latest
+FROM golang:1.24-alpine
 RUN apk --no-cache add ca-certificates git nodejs npm python3 bash
 
 WORKDIR /app
