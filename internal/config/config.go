@@ -14,6 +14,7 @@ type Config struct {
 	Model         string `mapstructure:"model"`
 	MoonshotKey   string `mapstructure:"moonshot_api_key"`
 	OpenAIKey     string `mapstructure:"openai_api_key"`
+	ClaudeKey     string `mapstructure:"claude_api_key"`
 }
 
 // DefaultModel is the default LLM model
@@ -45,6 +46,7 @@ func Load() (*Config, error) {
 	v.BindEnv("model", "GROQ_MODEL")
 	v.BindEnv("moonshot_api_key", "MOONSHOT_API_KEY")
 	v.BindEnv("openai_api_key", "OPENAI_API_KEY")
+	v.BindEnv("claude_api_key", "ANTHROPIC_API_KEY")
 
 	// Read config file (optional)
 	if err := v.ReadInConfig(); err != nil {

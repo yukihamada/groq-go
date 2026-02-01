@@ -25,18 +25,34 @@ func (t *SelfImproveTool) Name() string {
 
 func (t *SelfImproveTool) Description() string {
 	return `Modify the groq-go source code to improve this AI system.
-Actions:
+
+## Basic Actions
 - "list": List source files (use pattern to filter)
 - "read": Read a source file
 - "write": Write/modify a source file
 - "status": Show git status
 - "diff": Show uncommitted changes
 - "commit": Commit changes with a message
-- "push": Push to GitHub (triggers auto-deploy)
-- "rollback": Rollback to previous version
 - "history": Show commit history
 
-IMPORTANT: After pushing, changes will be deployed automatically. Test carefully before pushing.`
+## Safe Deployment
+- "verify_build": Test if code compiles (ALWAYS do this before pushing!)
+- "safe_push": Push only if build succeeds + mark as known good
+- "mark_good": Mark current deployed version as known good
+
+## Rollback Options (in order of preference)
+- "rollback": Rollback to previous commit
+- "rollback_to": Rollback to specific commit (use "hash" parameter)
+- "rollback_safe": Rollback to last known good commit
+- "fly_rollback": Get Fly.io rollback instructions (last resort)
+
+## Safety Protocol
+1. Make changes with "write"
+2. Check with "diff"
+3. Verify with "verify_build"
+4. Commit with "commit"
+5. Deploy with "safe_push" (NOT "push")
+6. If broken: "rollback_safe" or "fly_rollback"`
 }
 
 func (t *SelfImproveTool) Parameters() map[string]any {
@@ -46,7 +62,7 @@ func (t *SelfImproveTool) Parameters() map[string]any {
 			"action": map[string]any{
 				"type":        "string",
 				"description": "Action to perform",
-				"enum":        []string{"list", "read", "write", "status", "diff", "commit", "push", "rollback", "history"},
+				"enum":        []string{"list", "read", "write", "status", "diff", "commit", "push", "safe_push", "verify_build", "mark_good", "rollback", "rollback_to", "rollback_safe", "fly_rollback", "history"},
 			},
 			"path": map[string]any{
 				"type":        "string",
@@ -64,6 +80,10 @@ func (t *SelfImproveTool) Parameters() map[string]any {
 				"type":        "string",
 				"description": "Filter pattern for list action (e.g., '.go', 'internal/')",
 			},
+			"hash": map[string]any{
+				"type":        "string",
+				"description": "Commit hash for rollback_to action",
+			},
 		},
 		"required": []string{"action"},
 	}
@@ -80,6 +100,7 @@ func (t *SelfImproveTool) Execute(ctx context.Context, args json.RawMessage) (to
 		Content string `json:"content"`
 		Message string `json:"message"`
 		Pattern string `json:"pattern"`
+		Hash    string `json:"hash"`
 	}
 
 	if err := json.Unmarshal(args, &params); err != nil {
@@ -140,17 +161,61 @@ func (t *SelfImproveTool) Execute(ctx context.Context, args json.RawMessage) (to
 		}
 		return tool.Result{Content: fmt.Sprintf("Committed: %s - %s", commit.Hash[:8], commit.Message)}, nil
 
+	case "verify_build":
+		if err := t.manager.VerifyBuild(ctx); err != nil {
+			return tool.Result{Content: fmt.Sprintf("❌ Build failed: %v", err), IsError: true}, nil
+		}
+		return tool.Result{Content: "✅ Build verification passed. Safe to push."}, nil
+
 	case "push":
 		if err := t.manager.Push(ctx); err != nil {
 			return tool.Result{Content: err.Error(), IsError: true}, nil
 		}
-		return tool.Result{Content: "Pushed to GitHub. Auto-deploy will start shortly. Check https://groq-go-yuki.fly.dev/ in 2-3 minutes."}, nil
+		return tool.Result{Content: "⚠️ Pushed to GitHub (without build verification). Consider using 'safe_push' instead."}, nil
+
+	case "safe_push":
+		if err := t.manager.SafePush(ctx); err != nil {
+			return tool.Result{Content: fmt.Sprintf("❌ Safe push failed: %v", err), IsError: true}, nil
+		}
+		return tool.Result{Content: "✅ Build verified and pushed to GitHub. Marked as known good. Auto-deploy will start shortly. Check https://groq-go-yuki.fly.dev/ in 2-3 minutes."}, nil
+
+	case "mark_good":
+		if err := t.manager.MarkAsGood(ctx); err != nil {
+			return tool.Result{Content: err.Error(), IsError: true}, nil
+		}
+		return tool.Result{Content: fmt.Sprintf("✅ Current commit marked as known good: %s", t.manager.GetLastKnownGood())}, nil
 
 	case "rollback":
 		if err := t.manager.RollbackToLast(ctx); err != nil {
 			return tool.Result{Content: err.Error(), IsError: true}, nil
 		}
-		return tool.Result{Content: "Rolled back to previous version. Use 'commit' and 'push' to deploy the rollback."}, nil
+		return tool.Result{Content: "Rolled back to previous version. Use 'verify_build', 'commit', and 'safe_push' to deploy the rollback."}, nil
+
+	case "rollback_to":
+		if params.Hash == "" {
+			return tool.Result{Content: "hash is required for rollback_to action", IsError: true}, nil
+		}
+		if err := t.manager.RollbackToCommit(ctx, params.Hash); err != nil {
+			return tool.Result{Content: err.Error(), IsError: true}, nil
+		}
+		return tool.Result{Content: fmt.Sprintf("Rolled back to commit %s. Use 'verify_build', 'commit', and 'safe_push' to deploy.", params.Hash)}, nil
+
+	case "rollback_safe":
+		lastGood := t.manager.GetLastKnownGood()
+		if lastGood == "" {
+			return tool.Result{Content: "No known good commit saved. Use 'fly_rollback' for Fly.io manual rollback.", IsError: true}, nil
+		}
+		if err := t.manager.RollbackToSafe(ctx); err != nil {
+			return tool.Result{Content: err.Error(), IsError: true}, nil
+		}
+		return tool.Result{Content: fmt.Sprintf("✅ Rolled back to last known good: %s. Use 'commit' and 'safe_push' to deploy.", lastGood)}, nil
+
+	case "fly_rollback":
+		info, err := t.manager.GetFlyRollbackInfo(ctx)
+		if err != nil {
+			return tool.Result{Content: err.Error(), IsError: true}, nil
+		}
+		return tool.Result{Content: info}, nil
 
 	case "history":
 		history := t.manager.GetHistory()
@@ -159,8 +224,16 @@ func (t *SelfImproveTool) Execute(ctx context.Context, args json.RawMessage) (to
 		}
 		var sb strings.Builder
 		sb.WriteString("Commit History:\n")
+		lastGood := t.manager.GetLastKnownGood()
 		for i, c := range history {
-			sb.WriteString(fmt.Sprintf("%d. %s - %s\n", i+1, c.Hash[:8], c.Message))
+			marker := ""
+			if lastGood != "" && strings.HasPrefix(c.Hash, lastGood[:8]) {
+				marker = " ✅ (known good)"
+			}
+			sb.WriteString(fmt.Sprintf("%d. %s - %s%s\n", i+1, c.Hash[:8], c.Message, marker))
+		}
+		if lastGood != "" {
+			sb.WriteString(fmt.Sprintf("\nLast known good: %s\n", lastGood[:8]))
 		}
 		return tool.Result{Content: sb.String()}, nil
 

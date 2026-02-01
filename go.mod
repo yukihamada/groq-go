@@ -6,6 +6,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.6.0
 	github.com/chzyer/readline v1.5.1
 	github.com/fatih/color v1.16.0
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/spf13/viper v1.18.0
 	golang.org/x/crypto v0.18.0

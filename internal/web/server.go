@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"embed"
@@ -8,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"math/big"
 	"net/http"
 	"os"
@@ -22,11 +22,16 @@ import (
 	"groq-go/internal/auth"
 	"groq-go/internal/client"
 	"groq-go/internal/knowledge"
+	"groq-go/internal/logging"
 	"groq-go/internal/plugin"
 	"groq-go/internal/project"
 	"groq-go/internal/storage"
 	"groq-go/internal/tool"
+	"groq-go/internal/version"
 )
+
+// Logger for web package
+var log = logging.WithComponent("web")
 
 // Time helpers for easier testing
 var (
@@ -44,10 +49,64 @@ func randInt(max int) int {
 //go:embed static/*
 var staticFiles embed.FS
 
+// Allowed origins for WebSocket connections
+var allowedOrigins = map[string]bool{
+	"localhost":             true,
+	"127.0.0.1":             true,
+	"groq-go-yuki.fly.dev":  true,
+}
+
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for development
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // Allow non-browser clients
+		}
+		// Parse origin and check against allowlist
+		for allowed := range allowedOrigins {
+			if strings.Contains(origin, allowed) {
+				return true
+			}
+		}
+		log.Warn("Blocked WebSocket connection", "origin", origin)
+		return false
 	},
+}
+
+// Rate limiter for API endpoints
+type rateLimiter struct {
+	mu       sync.Mutex
+	clients  map[string]*clientRate
+	maxReqs  int
+	window   time.Duration
+}
+
+type clientRate struct {
+	count    int
+	resetAt  time.Time
+}
+
+var apiLimiter = &rateLimiter{
+	clients: make(map[string]*clientRate),
+	maxReqs: 60,              // 60 requests
+	window:  time.Minute,     // per minute
+}
+
+func (rl *rateLimiter) allow(clientIP string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	client, exists := rl.clients[clientIP]
+	if !exists || now.After(client.resetAt) {
+		rl.clients[clientIP] = &clientRate{count: 1, resetAt: now.Add(rl.window)}
+		return true
+	}
+	if client.count >= rl.maxReqs {
+		return false
+	}
+	client.count++
+	return true
 }
 
 // Server represents the web server
@@ -60,28 +119,29 @@ type Server struct {
 	projects  *project.Manager
 	knowledge *knowledge.KnowledgeBase
 	plugins   *plugin.Manager
+	versions  *version.Manager
 	addr      string
 	uploadDir string
 }
 
 // NewServer creates a new web server
-func NewServer(c *client.Client, registry *tool.Registry, kb *knowledge.KnowledgeBase, pm *plugin.Manager, addr string) *Server {
+func NewServer(c *client.Client, registry *tool.Registry, kb *knowledge.KnowledgeBase, pm *plugin.Manager, vm *version.Manager, addr string) *Server {
 	// Initialize storage
 	store, err := storage.NewFileStorage(storage.DefaultStorageDir())
 	if err != nil {
-		log.Printf("Warning: failed to initialize storage: %v", err)
+		log.Warn("Failed to initialize storage", "error", err)
 	}
 
 	// Initialize auth manager
 	authManager, err := auth.NewManager()
 	if err != nil {
-		log.Printf("Warning: failed to initialize auth: %v", err)
+		log.Warn("Failed to initialize auth", "error", err)
 	}
 
 	// Initialize project manager
 	projectManager, err := project.NewManager()
 	if err != nil {
-		log.Printf("Warning: failed to initialize project manager: %v", err)
+		log.Warn("Failed to initialize project manager", "error", err)
 	}
 
 	// Initialize upload directory
@@ -98,8 +158,25 @@ func NewServer(c *client.Client, registry *tool.Registry, kb *knowledge.Knowledg
 		projects:  projectManager,
 		knowledge: kb,
 		plugins:   pm,
+		versions:  vm,
 		addr:      addr,
 		uploadDir: uploadDir,
+	}
+}
+
+// rateLimitMiddleware wraps handlers with rate limiting
+func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		clientIP := r.RemoteAddr
+		if fwdFor := r.Header.Get("X-Forwarded-For"); fwdFor != "" {
+			clientIP = strings.Split(fwdFor, ",")[0]
+		}
+		if !apiLimiter.allow(clientIP) {
+			log.Warn("Rate limit exceeded", "client_ip", clientIP)
+			http.Error(w, "Too many requests", http.StatusTooManyRequests)
+			return
+		}
+		next(w, r)
 	}
 }
 
@@ -115,28 +192,33 @@ func (s *Server) Start() error {
 	fileServer := http.FileServer(http.FS(staticFS))
 	mux.Handle("/", addSecurityHeaders(fileServer))
 
-	// WebSocket endpoint
+	// WebSocket endpoint (no rate limit - managed separately)
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
-	// API endpoints
-	mux.HandleFunc("/api/models", s.handleModels)
-	mux.HandleFunc("/api/upload", s.handleUpload)
-	mux.HandleFunc("/api/sessions", s.handleSessions)
-	mux.HandleFunc("/api/sessions/", s.handleSession)
-	mux.HandleFunc("/api/auth/login", s.handleLogin)
-	mux.HandleFunc("/api/auth/logout", s.handleLogout)
-	mux.HandleFunc("/api/auth/status", s.handleAuthStatus)
-	mux.HandleFunc("/api/auth/register", s.handleRegister)
-	mux.HandleFunc("/api/projects", s.handleProjects)
-	mux.HandleFunc("/api/projects/", s.handleProject)
-	mux.HandleFunc("/api/share", s.handleShare)
-	mux.HandleFunc("/share/", s.handleSharedView)
-	mux.HandleFunc("/api/knowledge", s.handleKnowledge)
-	mux.HandleFunc("/api/knowledge/", s.handleKnowledgeDocument)
-	mux.HandleFunc("/api/plugins", s.handlePlugins)
-	mux.HandleFunc("/api/plugins/", s.handlePlugin)
+	// API endpoints with rate limiting
+	mux.HandleFunc("/api/models", rateLimitMiddleware(s.handleModels))
+	mux.HandleFunc("/api/upload", rateLimitMiddleware(s.handleUpload))
+	mux.HandleFunc("/api/sessions", rateLimitMiddleware(s.handleSessions))
+	mux.HandleFunc("/api/sessions/", rateLimitMiddleware(s.handleSession))
+	mux.HandleFunc("/api/auth/login", rateLimitMiddleware(s.handleLogin))
+	mux.HandleFunc("/api/auth/logout", rateLimitMiddleware(s.handleLogout))
+	mux.HandleFunc("/api/auth/status", rateLimitMiddleware(s.handleAuthStatus))
+	mux.HandleFunc("/api/auth/register", rateLimitMiddleware(s.handleRegister))
+	mux.HandleFunc("/api/projects", rateLimitMiddleware(s.handleProjects))
+	mux.HandleFunc("/api/projects/", rateLimitMiddleware(s.handleProject))
+	mux.HandleFunc("/api/share", rateLimitMiddleware(s.handleShare))
+	mux.HandleFunc("/share/", s.handleSharedView) // Public endpoint, no auth
+	mux.HandleFunc("/api/knowledge", rateLimitMiddleware(s.handleKnowledge))
+	mux.HandleFunc("/api/knowledge/", rateLimitMiddleware(s.handleKnowledgeDocument))
+	mux.HandleFunc("/api/plugins", rateLimitMiddleware(s.handlePlugins))
+	mux.HandleFunc("/api/plugins/", rateLimitMiddleware(s.handlePlugin))
+	mux.HandleFunc("/api/tts", rateLimitMiddleware(s.handleTTS))
 
-	log.Printf("Starting web server at http://localhost%s", s.addr)
+	// Version management endpoints
+	mux.HandleFunc("/api/versions", rateLimitMiddleware(s.handleVersions))
+	mux.HandleFunc("/api/versions/", rateLimitMiddleware(s.handleVersion))
+
+	log.Info("Starting web server", "addr", s.addr)
 	return http.ListenAndServe(s.addr, mux)
 }
 
@@ -152,6 +234,7 @@ type WSMessage struct {
 	DiffData string   `json:"diff_data,omitempty"` // For edit tool diffs
 	Images   []string `json:"images,omitempty"`    // Base64 image data for vision
 	ShareID  string   `json:"share_id,omitempty"`  // For sharing conversations
+	Mode     string   `json:"mode,omitempty"`      // "tools" or "improve"
 }
 
 // Store for tracking tool call args
@@ -163,13 +246,13 @@ type toolCallInfo struct {
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("[ERROR] WebSocket upgrade error: %v", err)
+		log.Error("WebSocket upgrade failed", "error", err)
 		return
 	}
 	defer conn.Close()
 
 	clientIP := r.RemoteAddr
-	log.Printf("[INFO] New WebSocket connection from %s", clientIP)
+	log.Info("New WebSocket connection", "client_ip", clientIP)
 
 	// Send welcome message
 	s.sendMessage(conn, WSMessage{
@@ -179,9 +262,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Message history for this session
 	var history []client.Message
+	currentMode := "tools" // Default mode: tools
+
 	history = append(history, client.Message{
 		Role:    "system",
-		Content: s.getSystemPrompt(),
+		Content: s.getSystemPrompt(currentMode),
 	})
 
 	var mu sync.Mutex
@@ -190,7 +275,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket error: %v", err)
+				log.Error("WebSocket read error", "error", err)
 			}
 			break
 		}
@@ -202,18 +287,38 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch msg.Type {
+		case "mode":
+			// Handle mode change
+			if msg.Mode == "tools" || msg.Mode == "improve" {
+				currentMode = msg.Mode
+				// Update system prompt in history
+				history[0] = client.Message{
+					Role:    "system",
+					Content: s.getSystemPrompt(currentMode),
+				}
+				log.Info("Mode changed", "mode", currentMode, "client_ip", clientIP)
+			}
+
 		case "chat":
-			log.Printf("[CHAT] User (%s): %s", clientIP, truncateLog(msg.Content, 100))
+			log.Debug("User message", "client_ip", clientIP, "content", truncateLog(msg.Content, 100))
 			if len(msg.Images) > 0 {
-				log.Printf("[CHAT] With %d image(s)", len(msg.Images))
+				log.Debug("Message includes images", "count", len(msg.Images))
+			}
+			// Update mode if provided with chat message
+			if msg.Mode != "" && (msg.Mode == "tools" || msg.Mode == "improve") {
+				currentMode = msg.Mode
+				history[0] = client.Message{
+					Role:    "system",
+					Content: s.getSystemPrompt(currentMode),
+				}
 			}
 			mu.Lock()
-			s.handleChat(conn, msg.Content, msg.Images, &history, clientIP)
+			s.handleChat(conn, msg.Content, msg.Images, &history, clientIP, currentMode)
 			mu.Unlock()
 
 		case "model":
 			if msg.Model != "" {
-				log.Printf("[INFO] Model changed to %s by %s", msg.Model, clientIP)
+				log.Info("Model changed", "model", msg.Model, "client_ip", clientIP)
 				s.client.SetModel(msg.Model)
 				s.sendMessage(conn, WSMessage{
 					Type:    "system",
@@ -222,7 +327,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 
 		case "clear":
-			log.Printf("[INFO] Conversation cleared by %s", clientIP)
+			log.Info("Conversation cleared", "client_ip", clientIP)
 			history = history[:1] // Keep system message
 			s.sendMessage(conn, WSMessage{
 				Type:    "system",
@@ -230,7 +335,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	log.Printf("[INFO] WebSocket connection closed: %s", clientIP)
+	log.Info("WebSocket connection closed", "client_ip", clientIP)
 }
 
 func truncateLog(s string, maxLen int) string {
@@ -240,7 +345,7 @@ func truncateLog(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func (s *Server) handleChat(conn *websocket.Conn, userMessage string, images []string, history *[]client.Message, clientIP string) {
+func (s *Server) handleChat(conn *websocket.Conn, userMessage string, images []string, history *[]client.Message, clientIP string, mode string) {
 	ctx := context.Background()
 
 	// Add user message (with images if present)
@@ -253,14 +358,22 @@ func (s *Server) handleChat(conn *websocket.Conn, userMessage string, images []s
 	}
 	*history = append(*history, msg)
 
-	tools := s.registry.ToClientTools()
+	// Get tools based on mode
+	var tools []client.Tool
+	if mode == "improve" {
+		// Improvement mode: only SelfImprove tool
+		tools = s.registry.ToClientToolsFiltered([]string{"SelfImprove"})
+	} else {
+		// Tools mode: all tools except SelfImprove (unless explicitly needed)
+		tools = s.registry.ToClientTools()
+	}
 
 	// Process with potential tool calls
 	for {
 		// Call API with streaming
 		stream, err := s.client.ChatCompletionStream(ctx, *history, tools)
 		if err != nil {
-			log.Printf("[ERROR] API error for %s: %v", clientIP, err)
+			log.Error("API error", "client_ip", clientIP, "error", err)
 			s.sendMessage(conn, WSMessage{Type: "error", Error: err.Error()})
 			return
 		}
@@ -280,7 +393,7 @@ func (s *Server) handleChat(conn *websocket.Conn, userMessage string, images []s
 		// Check for tool calls
 		if finishReason == "tool_calls" && len(msg.ToolCalls) > 0 {
 			for _, tc := range msg.ToolCalls {
-				log.Printf("[TOOL] %s calling %s", clientIP, tc.Function.Name)
+				log.Debug("Tool call", "client_ip", clientIP, "tool", tc.Function.Name)
 
 				// Notify tool call
 				s.sendMessage(conn, WSMessage{
@@ -293,9 +406,9 @@ func (s *Server) handleChat(conn *websocket.Conn, userMessage string, images []s
 				result, _ := s.executor.ExecuteToolCall(ctx, tc)
 
 				if result.IsError {
-					log.Printf("[TOOL] %s error: %s", tc.Function.Name, truncateLog(result.Content, 100))
+					log.Error("Tool execution error", "tool", tc.Function.Name, "error", truncateLog(result.Content, 100))
 				} else {
-					log.Printf("[TOOL] %s completed", tc.Function.Name)
+					log.Debug("Tool completed", "tool", tc.Function.Name)
 				}
 
 				// Extract diff data if present
@@ -417,10 +530,19 @@ func (s *Server) streamResponse(conn *websocket.Conn, stream *client.StreamReade
 
 func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 	models := []string{
+		// Groq models
 		"llama-3.3-70b-versatile",
 		"llama-3.1-8b-instant",
 		"llama-3.2-90b-vision-preview",
 		"mixtral-8x7b-32768",
+		// Claude models
+		"claude-sonnet-4-20250514",
+		"claude-3-5-sonnet-20241022",
+		"claude-3-5-haiku-20241022",
+		"claude-3-opus-20240229",
+		// OpenAI models
+		"gpt-4o",
+		"gpt-4o-mini",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -550,9 +672,17 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) sendMessage(conn *websocket.Conn, msg WSMessage) {
-	data, _ := json.Marshal(msg)
-	conn.WriteMessage(websocket.TextMessage, data)
+func (s *Server) sendMessage(conn *websocket.Conn, msg WSMessage) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		log.Error("Failed to marshal WebSocket message", "error", err)
+		return err
+	}
+	if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		log.Error("Failed to write WebSocket message", "error", err)
+		return err
+	}
+	return nil
 }
 
 // Auth handlers
@@ -837,12 +967,12 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := s.storage.SaveShare(ctx, share); err != nil {
-			log.Printf("[ERROR] Failed to save share: %v", err)
+			log.Error("Failed to save share", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("[INFO] Created share link: %s", shareID)
+		log.Info("Created share link", "share_id", shareID)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
@@ -1011,12 +1141,12 @@ func (s *Server) handleKnowledge(w http.ResponseWriter, r *http.Request) {
 
 		doc, err := s.knowledge.AddDocument(ctx, req.Name, req.Content)
 		if err != nil {
-			log.Printf("[ERROR] Failed to add document: %v", err)
+			log.Error("Failed to add document to knowledge base", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("[INFO] Added document to knowledge base: %s", doc.Name)
+		log.Info("Added document to knowledge base", "name", doc.Name)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(doc)
@@ -1056,7 +1186,7 @@ func (s *Server) handleKnowledgeDocument(w http.ResponseWriter, r *http.Request)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Printf("[INFO] Deleted document from knowledge base: %s", docID)
+		log.Info("Deleted document from knowledge base", "doc_id", docID)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
 
@@ -1093,12 +1223,12 @@ func (s *Server) handlePlugins(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := s.plugins.AddPlugin(&req); err != nil {
-			log.Printf("[ERROR] Failed to add plugin: %v", err)
+			log.Error("Failed to add plugin", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("[INFO] Added plugin: %s", req.Name)
+		log.Info("Added plugin", "name", req.Name)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "added"})
@@ -1145,12 +1275,12 @@ func (s *Server) handlePlugin(w http.ResponseWriter, r *http.Request) {
 		case "enable":
 			err = s.plugins.EnablePlugin(name)
 			if err == nil {
-				log.Printf("[INFO] Enabled plugin: %s", name)
+				log.Info("Enabled plugin", "name", name)
 			}
 		case "disable":
 			err = s.plugins.DisablePlugin(name)
 			if err == nil {
-				log.Printf("[INFO] Disabled plugin: %s", name)
+				log.Info("Disabled plugin", "name", name)
 			}
 		default:
 			http.Error(w, "Unknown action", http.StatusBadRequest)
@@ -1170,7 +1300,7 @@ func (s *Server) handlePlugin(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Printf("[INFO] Removed plugin: %s", name)
+		log.Info("Removed plugin", "name", name)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
 
@@ -1179,7 +1309,134 @@ func (s *Server) handlePlugin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) getSystemPrompt() string {
+// handleTTS handles text-to-speech requests using Kokoro TTS
+func (s *Server) handleTTS(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Text  string `json:"text"`
+		Voice string `json:"voice"`
+		Speed float64 `json:"speed"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Text == "" {
+		http.Error(w, "Text is required", http.StatusBadRequest)
+		return
+	}
+
+	// Default values
+	if req.Voice == "" {
+		req.Voice = "jf_alpha"
+	}
+	if req.Speed == 0 {
+		req.Speed = 1.0
+	}
+
+	// Get FAL API key
+	falAPIKey := os.Getenv("FAL_API_KEY")
+	if falAPIKey == "" {
+		// Fallback: return empty response, let client use Web Speech API
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"fallback": true})
+		return
+	}
+
+	// Call Kokoro TTS API
+	ttsReq := map[string]any{
+		"prompt": req.Text,
+		"voice":  req.Voice,
+		"speed":  req.Speed,
+	}
+	ttsBody, _ := json.Marshal(ttsReq)
+
+	httpReq, err := http.NewRequest("POST", "https://fal.run/fal-ai/kokoro/japanese", bytes.NewReader(ttsBody))
+	if err != nil {
+		http.Error(w, "Failed to create request", http.StatusInternalServerError)
+		return
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Key "+falAPIKey)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		log.Error("TTS request failed", "error", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"fallback": true, "error": err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Error("TTS API error", "response", string(body))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"fallback": true, "error": "TTS API error"})
+		return
+	}
+
+	// Parse response and return audio URL
+	var ttsResp struct {
+		Audio struct {
+			URL string `json:"url"`
+		} `json:"audio"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&ttsResp); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"fallback": true})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"audio_url": ttsResp.Audio.URL,
+	})
+}
+
+func (s *Server) getSystemPrompt(mode string) string {
+	if mode == "improve" {
+		return `You are groq-go in IMPROVEMENT MODE. Your primary purpose is to improve your own source code.
+
+## Available Tool
+You only have access to the SelfImprove tool in this mode.
+
+## SelfImprove Actions
+- "list": List source files (use pattern to filter)
+- "read": Read a source file
+- "write": Modify a source file
+- "status": Show git status
+- "diff": Show uncommitted changes
+- "verify_build": Test if code compiles (ALWAYS do this before pushing!)
+- "commit": Commit changes with a message
+- "safe_push": Push only if build succeeds + mark as known good
+- "rollback": Rollback to previous commit
+- "rollback_safe": Rollback to last known good
+- "fly_rollback": Get Fly.io rollback instructions
+- "history": Show commit history
+
+## Safe Deployment Protocol
+1. Make changes with "write"
+2. Check with "diff"
+3. Verify with "verify_build"
+4. Commit with "commit"
+5. Deploy with "safe_push"
+6. If broken: "rollback_safe" or "fly_rollback"
+
+## Guidelines
+- Be careful with changes - they affect the live system
+- Always verify build before pushing
+- Keep changes small and focused
+- Test thoroughly before deploying`
+	}
+
+	// Default: Tools mode
 	return `You are groq-go, a web-based AI assistant for software engineering tasks.
 
 You have access to tools for reading, writing, and editing files, searching the codebase, running shell commands, managing git repositories, and generating images.
@@ -1198,17 +1455,6 @@ You have access to tools for reading, writing, and editing files, searching the 
 - CodeExec: Execute code in a sandbox (JavaScript, Python, Go, shell)
 - KnowledgeSearch: Search the knowledge base for relevant information
 - KnowledgeList: List documents in the knowledge base
-- SelfImprove: Modify groq-go source code (list, read, write, commit, push, rollback)
-
-## Self-Improvement
-You can improve your own source code using the SelfImprove tool:
-1. Use "list" to see source files
-2. Use "read" to read a file
-3. Use "write" to modify a file
-4. Use "diff" and "status" to review changes
-5. Use "commit" to save changes locally
-6. Use "push" to deploy (triggers auto-deploy)
-7. Use "rollback" if something breaks
 
 ## Important Rules
 1. ALWAYS use the Write tool to create files. NEVER use bash echo, cat, or heredoc to create files.
@@ -1238,4 +1484,169 @@ func addSecurityHeaders(next http.Handler) http.Handler {
 				"font-src 'self' https://cdn.jsdelivr.net;")
 		next.ServeHTTP(w, r)
 	})
+}
+
+// Version management handlers
+func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
+	if s.versions == nil {
+		http.Error(w, "Version management not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	ctx := r.Context()
+
+	switch r.Method {
+	case http.MethodGet:
+		versions := s.versions.ListVersions()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"versions": versions,
+			"count":    len(versions),
+		})
+
+	case http.MethodPost:
+		var req struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		if req.Name == "" {
+			http.Error(w, "Name is required", http.StatusBadRequest)
+			return
+		}
+
+		v, err := s.versions.CreateVersion(ctx, req.Name, req.Description)
+		if err != nil {
+			log.Error("Failed to create version", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		log.Info("Created version", "id", v.ID, "name", v.Name)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(v)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+	if s.versions == nil {
+		http.Error(w, "Version management not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Extract version ID and action from path
+	// /api/versions/{id} or /api/versions/{id}/{action}
+	path := strings.TrimPrefix(r.URL.Path, "/api/versions/")
+	parts := strings.Split(path, "/")
+	if len(parts) == 0 || parts[0] == "" {
+		http.Error(w, "Version ID required", http.StatusBadRequest)
+		return
+	}
+
+	id := parts[0]
+	action := ""
+	if len(parts) > 1 {
+		action = parts[1]
+	}
+
+	ctx := r.Context()
+
+	// Handle actions
+	if action != "" && r.Method == http.MethodPost {
+		switch action {
+		case "build":
+			if err := s.versions.BuildVersion(ctx, id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			log.Info("Built version", "id", id)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"status": "built"})
+			return
+
+		case "start":
+			if err := s.versions.StartVersion(ctx, id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			v, _ := s.versions.GetVersion(id)
+			log.Info("Started version", "id", id, "port", v.Port)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{
+				"status": "started",
+				"port":   v.Port,
+			})
+			return
+
+		case "stop":
+			if err := s.versions.StopVersion(ctx, id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			log.Info("Stopped version", "id", id)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
+			return
+
+		case "restart":
+			if err := s.versions.RestartVersion(ctx, id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			v, _ := s.versions.GetVersion(id)
+			log.Info("Restarted version", "id", id, "port", v.Port)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{
+				"status": "restarted",
+				"port":   v.Port,
+			})
+			return
+
+		default:
+			http.Error(w, "Unknown action: "+action, http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Handle logs action (GET)
+	if action == "logs" && r.Method == http.MethodGet {
+		logs, err := s.versions.GetVersionLogs(id, 100)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"logs": logs})
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		v, ok := s.versions.GetVersion(id)
+		if !ok {
+			http.Error(w, "Version not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(v)
+
+	case http.MethodDelete:
+		if err := s.versions.DeleteVersion(ctx, id); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Info("Deleted version", "id", id)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }

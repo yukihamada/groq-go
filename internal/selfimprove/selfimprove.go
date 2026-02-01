@@ -14,11 +14,13 @@ import (
 
 // Manager handles self-improvement operations
 type Manager struct {
-	repoDir     string
-	repoURL     string
-	githubToken string
-	mu          sync.Mutex
-	history     []Commit
+	repoDir         string
+	repoURL         string
+	githubToken     string
+	mu              sync.Mutex
+	history         []Commit
+	lastKnownGood   string // Last known working commit hash
+	safeCommitFile  string // File to persist last known good commit
 }
 
 // Commit represents a git commit
@@ -39,12 +41,22 @@ func NewManager() (*Manager, error) {
 	// Working directory for the repo
 	home, _ := os.UserHomeDir()
 	repoDir := filepath.Join(home, ".groq-go-repo")
+	safeCommitFile := filepath.Join(home, ".config", "groq-go", "last_known_good")
+
+	// Ensure config directory exists
+	os.MkdirAll(filepath.Dir(safeCommitFile), 0755)
 
 	m := &Manager{
-		repoDir:     repoDir,
-		repoURL:     repoURL,
-		githubToken: githubToken,
-		history:     make([]Commit, 0),
+		repoDir:        repoDir,
+		repoURL:        repoURL,
+		githubToken:    githubToken,
+		history:        make([]Commit, 0),
+		safeCommitFile: safeCommitFile,
+	}
+
+	// Load last known good commit
+	if data, err := os.ReadFile(safeCommitFile); err == nil {
+		m.lastKnownGood = strings.TrimSpace(string(data))
 	}
 
 	return m, nil
@@ -270,4 +282,97 @@ func (m *Manager) saveHistory() {
 func (m *Manager) ToJSON() string {
 	data, _ := json.MarshalIndent(m.history, "", "  ")
 	return string(data)
+}
+
+// VerifyBuild tests if the code compiles successfully
+func (m *Manager) VerifyBuild(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "go", "build", "-o", "/dev/null", ".")
+	cmd.Dir = m.repoDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("build verification failed: %s - %w", string(output), err)
+	}
+	return nil
+}
+
+// SafePush pushes only if the code builds successfully
+func (m *Manager) SafePush(ctx context.Context) error {
+	// First verify the build
+	if err := m.VerifyBuild(ctx); err != nil {
+		return fmt.Errorf("cannot push: %w", err)
+	}
+
+	// Push to remote
+	if err := m.Push(ctx); err != nil {
+		return err
+	}
+
+	// Mark as last known good
+	return m.MarkAsGood(ctx)
+}
+
+// MarkAsGood marks the current commit as last known good
+func (m *Manager) MarkAsGood(ctx context.Context) error {
+	output, err := exec.CommandContext(ctx, "git", "-C", m.repoDir, "rev-parse", "HEAD").Output()
+	if err != nil {
+		return err
+	}
+	hash := strings.TrimSpace(string(output))
+	m.lastKnownGood = hash
+	return os.WriteFile(m.safeCommitFile, []byte(hash), 0644)
+}
+
+// GetLastKnownGood returns the last known good commit hash
+func (m *Manager) GetLastKnownGood() string {
+	return m.lastKnownGood
+}
+
+// RollbackToCommit rolls back to a specific commit by hash
+func (m *Manager) RollbackToCommit(ctx context.Context, hash string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Verify the commit exists
+	cmd := exec.CommandContext(ctx, "git", "-C", m.repoDir, "cat-file", "-t", hash)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("commit %s not found", hash)
+	}
+
+	// Reset to that commit
+	return m.runGit(ctx, "reset", "--hard", hash)
+}
+
+// RollbackToSafe rolls back to the last known good commit
+func (m *Manager) RollbackToSafe(ctx context.Context) error {
+	if m.lastKnownGood == "" {
+		return fmt.Errorf("no known good commit saved - use 'fly_rollback' for Fly.io rollback")
+	}
+	return m.RollbackToCommit(ctx, m.lastKnownGood)
+}
+
+// GetFlyRollbackInfo returns Fly.io rollback instructions
+func (m *Manager) GetFlyRollbackInfo(ctx context.Context) (string, error) {
+	// Try to get release list from fly
+	cmd := exec.CommandContext(ctx, "flyctl", "releases", "-a", "groq-go-yuki")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Return manual instructions if flyctl not available
+		return `## Fly.io Manual Rollback
+
+If all else fails, you can rollback using Fly.io directly:
+
+1. SSH into any machine with flyctl installed
+2. Run: flyctl releases -a groq-go-yuki
+3. Find a working version number (e.g., v42)
+4. Run: flyctl releases rollback v42 -a groq-go-yuki
+
+Or via Fly.io dashboard:
+1. Go to https://fly.io/apps/groq-go-yuki
+2. Click "Releases"
+3. Click "Rollback" on a working version
+
+This will immediately deploy the previous working version.`, nil
+	}
+
+	return fmt.Sprintf("## Fly.io Releases\n\n%s\n\nTo rollback: flyctl releases rollback <version> -a groq-go-yuki", string(output)), nil
 }

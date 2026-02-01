@@ -4,18 +4,19 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"groq-go/internal/client"
 	"groq-go/internal/config"
 	"groq-go/internal/knowledge"
+	"groq-go/internal/logging"
 	"groq-go/internal/mcp"
 	"groq-go/internal/plugin"
 	"groq-go/internal/repl"
 	"groq-go/internal/selfimprove"
 	"groq-go/internal/tool"
 	"groq-go/internal/tool/tools"
+	"groq-go/internal/version"
 	"groq-go/internal/web"
 )
 
@@ -46,12 +47,15 @@ func run() error {
 	if cfg.OpenAIKey != "" {
 		opts = append(opts, client.WithProviderKey("openai", cfg.OpenAIKey))
 	}
+	if cfg.ClaudeKey != "" {
+		opts = append(opts, client.WithProviderKey("anthropic", cfg.ClaudeKey))
+	}
 	apiClient := client.New(cfg.APIKey, opts...)
 
 	// Initialize knowledge base
 	kb, err := knowledge.NewKnowledgeBase(knowledge.DefaultKnowledgeDir())
 	if err != nil {
-		log.Printf("Warning: failed to initialize knowledge base: %v", err)
+		logging.Warn("Failed to initialize knowledge base", "error", err)
 	}
 
 	// Initialize self-improvement manager
@@ -59,23 +63,34 @@ func run() error {
 	if os.Getenv("GITHUB_TOKEN") != "" {
 		selfImproveManager, err = selfimprove.NewManager()
 		if err != nil {
-			log.Printf("Warning: failed to initialize self-improve manager: %v", err)
+			logging.Warn("Failed to initialize self-improve manager", "error", err)
 		} else {
 			// Initialize repo in background
 			go func() {
 				ctx := context.Background()
 				if err := selfImproveManager.Init(ctx); err != nil {
-					log.Printf("Warning: failed to init self-improve repo: %v", err)
+					logging.Warn("Failed to init self-improve repo", "error", err)
 				} else {
-					log.Printf("Self-improvement repo initialized at %s", selfImproveManager.GetRepoDir())
+					logging.Info("Self-improvement repo initialized", "path", selfImproveManager.GetRepoDir())
 				}
 			}()
 		}
 	}
 
+	// Initialize version manager (requires selfimprove manager)
+	var versionManager *version.Manager
+	if selfImproveManager != nil {
+		versionManager, err = version.NewManager(selfImproveManager)
+		if err != nil {
+			logging.Warn("Failed to initialize version manager", "error", err)
+		} else {
+			logging.Info("Version manager initialized")
+		}
+	}
+
 	// Create tool registry and register built-in tools
 	registry := tool.NewRegistry()
-	registerTools(registry, kb, selfImproveManager)
+	registerTools(registry, kb, selfImproveManager, versionManager)
 
 	// Initialize MCP manager
 	mcpManager := mcp.NewManager()
@@ -100,7 +115,7 @@ func run() error {
 	// Initialize plugin manager
 	pluginManager, err := plugin.NewManager()
 	if err != nil {
-		log.Printf("Warning: failed to initialize plugin manager: %v", err)
+		logging.Warn("Failed to initialize plugin manager", "error", err)
 	} else {
 		// Register plugin tools
 		pluginToolCount := plugin.RegisterPluginTools(registry, pluginManager)
@@ -111,7 +126,7 @@ func run() error {
 
 	// Start in web mode or CLI mode
 	if *webMode {
-		server := web.NewServer(apiClient, registry, kb, pluginManager, *webAddr)
+		server := web.NewServer(apiClient, registry, kb, pluginManager, versionManager, *webAddr)
 		return server.Start()
 	}
 
@@ -124,7 +139,7 @@ func run() error {
 	return r.Run()
 }
 
-func registerTools(registry *tool.Registry, kb *knowledge.KnowledgeBase, sim *selfimprove.Manager) {
+func registerTools(registry *tool.Registry, kb *knowledge.KnowledgeBase, sim *selfimprove.Manager, vm *version.Manager) {
 	registry.Register(tools.NewReadTool())
 	registry.Register(tools.NewWriteTool())
 	registry.Register(tools.NewEditTool())
@@ -146,5 +161,10 @@ func registerTools(registry *tool.Registry, kb *knowledge.KnowledgeBase, sim *se
 	// Self-improvement tool
 	if sim != nil {
 		registry.Register(tools.NewSelfImproveTool(sim))
+	}
+
+	// Version management tool
+	if vm != nil {
+		registry.Register(tools.NewVersionTool(vm))
 	}
 }

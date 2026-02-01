@@ -73,3 +73,29 @@ func (r *Registry) ToClientTools() []client.Tool {
 	}
 	return tools
 }
+
+// ToClientToolsFiltered returns only specified tools
+func (r *Registry) ToClientToolsFiltered(names []string) []client.Tool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	nameSet := make(map[string]bool)
+	for _, n := range names {
+		nameSet[n] = true
+	}
+
+	tools := make([]client.Tool, 0)
+	for _, t := range r.tools {
+		if nameSet[t.Name()] {
+			tools = append(tools, client.Tool{
+				Type: "function",
+				Function: client.FunctionSchema{
+					Name:        t.Name(),
+					Description: t.Description(),
+					Parameters:  t.Parameters(),
+				},
+			})
+		}
+	}
+	return tools
+}

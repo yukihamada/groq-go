@@ -1,0 +1,11 @@
+# Fastlane plugins
+# See: https://docs.fastlane.tools/plugins/
+
+# Automatically restart tests on failure
+# gem 'fastlane-plugin-retry'
+
+# Badge app icon with version/build info
+# gem 'fastlane-plugin-badge'
+
+# Versioning support
+# gem 'fastlane-plugin-versioning'

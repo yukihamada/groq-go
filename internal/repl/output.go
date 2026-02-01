@@ -37,7 +37,7 @@ func (o *Output) Printf(format string, args ...any) {
 // Assistant prints assistant output in a distinct style
 func (o *Output) Assistant(text string) {
 	o.Println()
-	o.Print(text)
+	o.Print("%s", text)
 	if !strings.HasSuffix(text, "\n") {
 		o.Println()
 	}

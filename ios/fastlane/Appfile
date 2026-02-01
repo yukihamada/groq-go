@@ -1,0 +1,22 @@
+# App identifier (bundle ID)
+app_identifier("com.groqgo.app")
+
+# Apple ID email
+# apple_id("your@email.com")
+
+# Team ID from Apple Developer Portal
+team_id("5BV85JW8US")
+
+# For App Store Connect API (recommended)
+# Note: API key is loaded in Fastfile via load_api_key function
+
+# For CI/CD environments, use environment variables:
+# FASTLANE_USER - Apple ID email
+# FASTLANE_PASSWORD - Apple ID password or app-specific password
+# FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD - App-specific password
+# FASTLANE_SESSION - Session cookie (for 2FA)
+
+# For App Store Connect API Key:
+# APP_STORE_CONNECT_API_KEY_KEY_ID
+# APP_STORE_CONNECT_API_KEY_ISSUER_ID
+# APP_STORE_CONNECT_API_KEY_KEY (base64 encoded)

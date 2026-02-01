@@ -1,0 +1,24 @@
+# Code signing configuration with match
+# See: https://docs.fastlane.tools/actions/match/
+
+# Git repo for storing certificates and profiles
+# git_url("git@github.com:username/certificates.git")
+
+# Storage mode: git, google_cloud, s3, or azure_blob
+# storage_mode("git")
+
+# App identifier(s)
+app_identifier(["com.groqgo.app"])
+
+# Certificate types to sync
+type("appstore") # Options: development, adhoc, appstore, enterprise
+
+# Username for App Store Connect
+# username("your@email.com")
+
+# Team ID
+# team_id("XXXXXXXXXX")
+
+# For CI/CD, use environment variables:
+# MATCH_PASSWORD - Password for encrypting/decrypting certificates
+# MATCH_GIT_BASIC_AUTHORIZATION - For Git authentication

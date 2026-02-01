@@ -56,15 +56,33 @@ func (t *WriteTool) Execute(ctx context.Context, argsJSON json.RawMessage) (tool
 		return tool.NewErrorResult("file_path is required"), nil
 	}
 
+	// Security: validate and clean the path
+	cleanPath := filepath.Clean(args.FilePath)
+
+	// Block dangerous paths
+	dangerousPaths := []string{"/etc/", "/usr/", "/bin/", "/sbin/", "/boot/", "/sys/", "/proc/"}
+	for _, dp := range dangerousPaths {
+		if filepath.HasPrefix(cleanPath, dp) {
+			return tool.NewErrorResult(fmt.Sprintf("writing to system path %s is not allowed", dp)), nil
+		}
+	}
+
+	// Block hidden config files that could be dangerous
+	baseName := filepath.Base(cleanPath)
+	if baseName == ".bashrc" || baseName == ".zshrc" || baseName == ".profile" ||
+	   baseName == ".ssh" || baseName == "authorized_keys" {
+		return tool.NewErrorResult(fmt.Sprintf("writing to %s is not allowed for security", baseName)), nil
+	}
+
 	// Create directory if it doesn't exist
-	dir := filepath.Dir(args.FilePath)
+	dir := filepath.Dir(cleanPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return tool.NewErrorResult(fmt.Sprintf("failed to create directory: %v", err)), nil
 	}
 
-	if err := os.WriteFile(args.FilePath, []byte(args.Content), 0644); err != nil {
+	if err := os.WriteFile(cleanPath, []byte(args.Content), 0644); err != nil {
 		return tool.NewErrorResult(fmt.Sprintf("failed to write file: %v", err)), nil
 	}
 
-	return tool.NewResult(fmt.Sprintf("Successfully wrote %d bytes to %s", len(args.Content), args.FilePath)), nil
+	return tool.NewResult(fmt.Sprintf("Successfully wrote %d bytes to %s", len(args.Content), cleanPath)), nil
 }

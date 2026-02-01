@@ -1,0 +1,55 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#6366f1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Grid pattern -->
+  <g opacity="0.1">
+    <line x1="0" y1="0" x2="1200" y2="630" stroke="#a855f7" stroke-width="1"/>
+    <line x1="0" y1="630" x2="1200" y2="0" stroke="#a855f7" stroke-width="1"/>
+    <line x1="600" y1="0" x2="600" y2="630" stroke="#a855f7" stroke-width="1"/>
+    <line x1="0" y1="315" x2="1200" y2="315" stroke="#a855f7" stroke-width="1"/>
+  </g>
+
+  <!-- Rocket emoji circle -->
+  <circle cx="600" cy="250" r="100" fill="#1a1a1a" stroke="url(#accent)" stroke-width="4"/>
+  <text x="600" y="285" font-size="80" text-anchor="middle">🚀</text>
+
+  <!-- Title -->
+  <text x="600" y="420" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="72" font-weight="bold" text-anchor="middle" fill="white">
+    groq<tspan fill="url(#accent)">-go</tspan>
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="480" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="28" text-anchor="middle" fill="#a0a0a0">
+    AI Assistant for Coding &amp; Creating
+  </text>
+
+  <!-- Model badges -->
+  <g transform="translate(340, 530)">
+    <rect x="0" y="0" width="100" height="32" rx="16" fill="#1a1a1a" stroke="#a855f7" stroke-width="1"/>
+    <text x="50" y="22" font-family="monospace" font-size="14" text-anchor="middle" fill="#a855f7">Claude</text>
+  </g>
+  <g transform="translate(460, 530)">
+    <rect x="0" y="0" width="100" height="32" rx="16" fill="#1a1a1a" stroke="#22c55e" stroke-width="1"/>
+    <text x="50" y="22" font-family="monospace" font-size="14" text-anchor="middle" fill="#22c55e">Llama</text>
+  </g>
+  <g transform="translate(580, 530)">
+    <rect x="0" y="0" width="100" height="32" rx="16" fill="#1a1a1a" stroke="#3b82f6" stroke-width="1"/>
+    <text x="50" y="22" font-family="monospace" font-size="14" text-anchor="middle" fill="#3b82f6">GPT-4</text>
+  </g>
+  <g transform="translate(700, 530)">
+    <rect x="0" y="0" width="100" height="32" rx="16" fill="#1a1a1a" stroke="#f59e0b" stroke-width="1"/>
+    <text x="50" y="22" font-family="monospace" font-size="14" text-anchor="middle" fill="#f59e0b">Kimi</text>
+  </g>
+</svg>

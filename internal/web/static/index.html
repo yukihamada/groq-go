@@ -1,9 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>groq-go Web</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>groq-go - AI Assistant</title>
+    <meta name="description" content="Web-based AI assistant for coding, creating, and exploring. Powered by Claude, Llama, and GPT.">
+
+    <!-- OGP / Social Sharing -->
+    <meta property="og:title" content="groq-go - AI Assistant">
+    <meta property="og:description" content="Web-based AI assistant for coding, creating, and exploring. Chat with Claude, Llama, GPT and more.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://groq-go-yuki.fly.dev/">
+    <meta property="og:image" content="https://groq-go-yuki.fly.dev/og-image.svg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="ja_JP">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="groq-go - AI Assistant">
+    <meta name="twitter:description" content="Web-based AI assistant for coding, creating, and exploring.">
+    <meta name="twitter:image" content="https://groq-go-yuki.fly.dev/og-image.svg">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230a0a0a' width='100' height='100' rx='20'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='%23a855f7'>🚀</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0a0a' width='180' height='180' rx='36'/><text x='90' y='125' font-size='100' text-anchor='middle' fill='%23a855f7'>🚀</text></svg>">
+
     <!-- Markdown & Syntax Highlighting -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-tomorrow.css" rel="stylesheet">
@@ -17,6 +42,12 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+            touch-action: manipulation;
         }
 
         :root {
@@ -69,7 +100,7 @@
 
         .header-actions {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
 
@@ -107,6 +138,61 @@
             background: var(--green);
         }
 
+        /* Header Menu */
+        .header-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+            min-width: 160px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .menu-section {
+            margin-bottom: 4px;
+        }
+
+        .menu-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            text-transform: uppercase;
+        }
+
+        .menu-item {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+
+        .menu-item:hover {
+            background: var(--bg-input);
+        }
+
+        .menu-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 8px 0;
+        }
+
         /* Main Layout */
         .main-container {
             flex: 1;
@@ -134,6 +220,9 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            overscroll-behavior: contain;
         }
 
         /* Preview Panel */
@@ -543,34 +632,42 @@
             }
 
             .header-actions {
-                gap: 4px;
+                gap: 6px;
             }
 
             .header-actions .btn {
-                padding: 6px 10px;
-                font-size: 11px;
+                padding: 8px 12px;
+                font-size: 14px;
+                min-width: 44px;
+                min-height: 44px;
             }
 
             .header-actions select {
-                max-width: 100px;
-                font-size: 11px;
-                padding: 6px 4px;
+                max-width: 110px;
+                font-size: 13px;
+                padding: 8px;
+                min-height: 44px;
             }
 
             header {
-                padding: 8px 10px;
+                padding: 8px 12px;
             }
 
             .input-area {
-                padding: 8px;
+                padding: 12px;
+                gap: 8px;
             }
 
             button, input, select {
-                min-height: 40px;
+                min-height: 44px;
             }
 
             .logo {
                 font-size: 1rem;
+            }
+
+            .logo span {
+                display: none;
             }
 
             .status {
@@ -578,37 +675,104 @@
             }
 
             #send-btn {
-                padding: 10px 14px;
+                padding: 12px 16px;
+                min-width: 50px;
             }
 
-            .toggle-preview span {
-                display: none;
+            #message-input {
+                font-size: 16px; /* Prevent zoom on iOS */
             }
         }
 
         @media (max-width: 600px) {
+            header {
+                padding: 8px;
+            }
+
+            .header-actions {
+                gap: 4px;
+            }
+
+            .header-actions .btn {
+                padding: 10px;
+                font-size: 16px;
+            }
+
+            .header-actions select {
+                max-width: 90px;
+                font-size: 12px;
+            }
+
             .preview-panel {
                 position: fixed;
                 bottom: 0;
                 left: 0;
                 right: 0;
-                height: 50vh;
+                height: 60vh;
                 z-index: 100;
-                border-radius: 16px 16px 0 0;
+                border-radius: 20px 20px 0 0;
                 box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
             }
 
+            .preview-panel::before {
+                content: '';
+                position: absolute;
+                top: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 40px;
+                height: 4px;
+                background: var(--border);
+                border-radius: 2px;
+            }
+
             .chat-panel {
-                padding-bottom: 60px;
+                padding-bottom: 0;
+            }
+
+            .chat-container {
+                padding: 12px;
+            }
+
+            .message {
+                max-width: 90%;
+                padding: 12px 14px;
+                font-size: 15px;
+            }
+
+            .input-area {
+                padding: 10px;
+                border-radius: 0;
             }
 
             .suggestions {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 8px;
             }
 
             .suggestion {
                 text-align: center;
+                padding: 14px;
+            }
+
+            .empty-state h2 {
+                font-size: 1.3rem;
+            }
+
+            .empty-state p {
+                font-size: 14px;
+            }
+
+            /* Bottom safe area for iOS */
+            .input-area {
+                padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
+            }
+
+            /* Header menu positioning */
+            .header-menu {
+                right: -8px;
+                min-width: 180px;
             }
         }
 
@@ -992,31 +1156,47 @@
         }
 
         @media (max-width: 600px) {
+            .voice-chat-overlay {
+                padding: 20px;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 0));
+            }
+
             .voice-chat-container {
                 padding: 20px;
+                width: 100%;
             }
 
             .voice-chat-avatar {
-                width: 100px;
-                height: 100px;
-                font-size: 40px;
+                width: 120px;
+                height: 120px;
+                font-size: 50px;
             }
 
             .voice-chat-status {
-                font-size: 18px;
+                font-size: 20px;
             }
 
             .voice-chat-transcript {
-                font-size: 14px;
+                font-size: 16px;
+                min-height: 80px;
+                padding: 16px;
             }
 
             .voice-chat-controls {
                 flex-wrap: wrap;
+                gap: 12px;
             }
 
             .voice-chat-btn {
-                padding: 12px 20px;
-                font-size: 14px;
+                padding: 16px 24px;
+                font-size: 16px;
+                min-height: 50px;
+                flex: 1;
+                min-width: 100px;
+            }
+
+            .voice-chat-btn.primary {
+                flex: 2;
             }
         }
 
@@ -1439,45 +1619,55 @@
         <div style="display: flex; align-items: center; gap: 12px;">
             <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">☰</button>
             <div class="logo">🚀 groq<span>-go</span></div>
-        </div>
-        <div class="header-actions">
             <div class="status">
                 <div class="status-dot" id="status-dot"></div>
-                <span id="status-text">Connecting...</span>
             </div>
-            <select id="model-select">
+        </div>
+        <div class="header-actions">
+            <select id="version-select" style="max-width: 100px; display: none;" onchange="switchVersion()">
+                <option value="main">main</option>
+            </select>
+            <select id="model-select" style="max-width: 140px;">
+                <optgroup label="Claude">
+                    <option value="claude-sonnet-4-20250514">Sonnet 4</option>
+                    <option value="claude-3-5-sonnet-20241022">3.5 Sonnet</option>
+                    <option value="claude-3-5-haiku-20241022">3.5 Haiku</option>
+                </optgroup>
                 <optgroup label="Llama">
                     <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
-                    <option value="llama-3.1-70b-versatile">Llama 3.1 70B</option>
-                    <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
-                    <option value="llama3-70b-8192">Llama 3 70B</option>
-                    <option value="llama3-8b-8192">Llama 3 8B</option>
-                </optgroup>
-                <optgroup label="Vision">
-                    <option value="llama-3.2-90b-vision-preview">Llama 3.2 90B Vision</option>
-                    <option value="llama-3.2-11b-vision-preview">Llama 3.2 11B Vision</option>
+                    <option value="llama-3.1-8b-instant">Llama 8B Fast</option>
                 </optgroup>
                 <optgroup label="Other">
-                    <option value="moonshotai/kimi-k2-instruct">Kimi K2</option>
-                    <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
-                    <option value="gemma2-9b-it">Gemma 2 9B</option>
-                </optgroup>
-                <optgroup label="OpenAI">
                     <option value="gpt-4o">GPT-4o</option>
                     <option value="gpt-4o-mini">GPT-4o Mini</option>
                 </optgroup>
             </select>
-            <button class="toggle-preview" id="toggle-preview" onclick="togglePreview()">
-                📺 <span>Preview</span>
-            </button>
-            <button class="btn" onclick="showExportMenu()">Export</button>
-            <button class="btn" onclick="shareConversation()">Share</button>
-            <button class="btn" onclick="showKnowledgeBase()">KB</button>
-            <button class="btn" onclick="showPlugins()">Plugins</button>
-            <button class="btn" id="voice-chat-btn" onclick="startVoiceChat()">🎙️ Voice</button>
-            <button class="btn" onclick="clearChat()">Clear</button>
+            <button class="btn" id="voice-chat-btn" onclick="startVoiceChat()">🎙️</button>
+            <button class="btn" id="toggle-preview" onclick="togglePreview()">📺</button>
+            <div class="menu-container" style="position: relative;">
+                <button class="btn" onclick="toggleMenu()">⋯</button>
+                <div id="header-menu" class="header-menu" style="display: none;">
+                    <div class="menu-section">
+                        <div class="menu-label">モード</div>
+                        <button onclick="changeMode('tools'); toggleMenu();" id="mode-tools" class="menu-item active">🔧 ツール</button>
+                        <button onclick="changeMode('improve'); toggleMenu();" id="mode-improve" class="menu-item">🚀 改善</button>
+                    </div>
+                    <div class="menu-divider"></div>
+                    <button onclick="shareConversation(); toggleMenu();" class="menu-item">📤 共有</button>
+                    <button onclick="showExportMenu(); toggleMenu();" class="menu-item">💾 エクスポート</button>
+                    <button onclick="showKnowledgeBase(); toggleMenu();" class="menu-item">📚 ナレッジ</button>
+                    <button onclick="showPlugins(); toggleMenu();" class="menu-item">🔌 プラグイン</button>
+                    <button onclick="showVersions(); toggleMenu();" class="menu-item">🔀 バージョン</button>
+                    <div class="menu-divider"></div>
+                    <button onclick="clearChat(); toggleMenu();" class="menu-item" style="color: var(--red);">🗑️ クリア</button>
+                </div>
+            </div>
         </div>
     </header>
+    <select id="mode-select" style="display: none;">
+        <option value="tools">tools</option>
+        <option value="improve">improve</option>
+    </select>
 
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="main-container">
@@ -1566,6 +1756,7 @@
         let isRecording = false;
         let sidebarVisible = false;
         let pendingImages = []; // Base64 images to send with next message
+        let currentMode = 'tools'; // 'tools' or 'improve'
 
         // ================== DOM Elements ==================
         const chatContainer = document.getElementById('chat-container');
@@ -2430,8 +2621,10 @@
             return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
         }
 
+        let currentAudio = null;
+
         function speak(text, callback) {
-            if (!('speechSynthesis' in window) || voiceChatMuted) {
+            if (voiceChatMuted) {
                 if (callback) callback();
                 return;
             }
@@ -2449,7 +2642,7 @@
                 .trim();
 
             // Limit length for speech
-            const maxLen = isJapanese(cleanText) ? 800 : 500;
+            const maxLen = 1000;
             if (cleanText.length > maxLen) {
                 cleanText = cleanText.substring(0, maxLen) + (isJapanese(cleanText) ? '。以下省略。' : '... and more.');
             }
@@ -2459,28 +2652,82 @@
                 return;
             }
 
-            // Cancel any ongoing speech
-            speechSynthesis.cancel();
+            // Stop any ongoing audio
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+            }
 
             isSpeaking = true;
-            const utterance = new SpeechSynthesisUtterance(cleanText);
 
-            // Set appropriate voice and settings based on language
+            // Try Kokoro TTS for Japanese
             if (isJapanese(cleanText)) {
-                utterance.lang = 'ja-JP';
-                if (japaneseVoice) {
-                    utterance.voice = japaneseVoice;
+                speakWithKokoro(cleanText, callback);
+            } else {
+                speakWithWebSpeech(cleanText, callback);
+            }
+        }
+
+        async function speakWithKokoro(text, callback) {
+            try {
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, voice: 'jf_alpha', speed: 1.0 })
+                });
+
+                const data = await response.json();
+
+                if (data.fallback || !data.audio_url) {
+                    // Fallback to Web Speech API
+                    speakWithWebSpeech(text, callback);
+                    return;
                 }
-                utterance.rate = 1.0;  // Natural speed for Japanese
-                utterance.pitch = 1.0;
+
+                // Play audio from Kokoro TTS
+                currentAudio = new Audio(data.audio_url);
+                currentAudio.onended = () => {
+                    isSpeaking = false;
+                    currentAudio = null;
+                    if (callback) callback();
+                };
+                currentAudio.onerror = (e) => {
+                    console.error('Audio error:', e);
+                    isSpeaking = false;
+                    currentAudio = null;
+                    // Fallback to Web Speech
+                    speakWithWebSpeech(text, callback);
+                };
+                currentAudio.play();
+
+            } catch (error) {
+                console.error('Kokoro TTS error:', error);
+                speakWithWebSpeech(text, callback);
+            }
+        }
+
+        function speakWithWebSpeech(text, callback) {
+            if (!('speechSynthesis' in window)) {
+                isSpeaking = false;
+                if (callback) callback();
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(text);
+
+            if (isJapanese(text)) {
+                utterance.lang = 'ja-JP';
+                if (japaneseVoice) utterance.voice = japaneseVoice;
+                utterance.rate = 1.0;
             } else {
                 utterance.lang = 'en-US';
-                if (englishVoice) {
-                    utterance.voice = englishVoice;
-                }
+                if (englishVoice) utterance.voice = englishVoice;
                 utterance.rate = 1.1;
-                utterance.pitch = 1.0;
             }
+            utterance.pitch = 1.0;
 
             utterance.onend = () => {
                 isSpeaking = false;
@@ -2840,7 +3087,8 @@
             ws.send(JSON.stringify({
                 type: 'chat',
                 content: content,
-                images: pendingImages
+                images: pendingImages,
+                mode: currentMode
             }));
 
             messageInput.value = '';
@@ -2856,6 +3104,48 @@
         function sendSuggestion(text) {
             messageInput.value = text;
             sendMessage();
+        }
+
+        function toggleMenu() {
+            const menu = document.getElementById('header-menu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('header-menu');
+            const menuContainer = e.target.closest('.menu-container');
+            if (!menuContainer && menu) {
+                menu.style.display = 'none';
+            }
+        });
+
+        function changeMode(mode) {
+            currentMode = mode;
+            const modeSelect = document.getElementById('mode-select');
+            modeSelect.value = mode;
+
+            // Update menu item highlighting
+            document.getElementById('mode-tools').classList.toggle('active', mode === 'tools');
+            document.getElementById('mode-improve').classList.toggle('active', mode === 'improve');
+
+            // Notify server of mode change
+            if (ws && isConnected) {
+                ws.send(JSON.stringify({ type: 'mode', mode: mode }));
+            }
+
+            // Show mode change notification
+            const modeText = mode === 'improve' ? '🚀 改善モード' : '🔧 ツールモード';
+            addSystemMessage(modeText);
+        }
+
+        function addSystemMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'message system';
+            div.style.cssText = 'background: var(--bg-input); border-left: 3px solid var(--accent); padding: 8px 12px; margin: 8px 0; font-size: 13px; color: var(--text-secondary);';
+            div.textContent = text;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         function clearChat() {
@@ -3104,6 +3394,234 @@
             }));
         });
 
+        // ================== Version Management ==================
+        let versions = [];
+        let currentVersion = 'main';
+        let versionPort = null;
+
+        async function loadVersions() {
+            try {
+                const resp = await fetch('/api/versions');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                versions = data.versions || [];
+                updateVersionSelect();
+            } catch (e) {
+                console.log('Version management not available');
+            }
+        }
+
+        function updateVersionSelect() {
+            const select = document.getElementById('version-select');
+            if (!select) return;
+
+            // Show selector if there are versions
+            if (versions.length > 0) {
+                select.style.display = 'block';
+                select.innerHTML = '<option value="main">main (:8080)</option>';
+                versions.forEach(v => {
+                    if (v.status === 'running' && v.port) {
+                        const opt = document.createElement('option');
+                        opt.value = v.id;
+                        opt.textContent = `${v.name} (:${v.port})`;
+                        opt.dataset.port = v.port;
+                        select.appendChild(opt);
+                    }
+                });
+            } else {
+                select.style.display = 'none';
+            }
+        }
+
+        function switchVersion() {
+            const select = document.getElementById('version-select');
+            const selectedOption = select.options[select.selectedIndex];
+
+            if (selectedOption.value === 'main') {
+                // Connect to main instance
+                versionPort = null;
+                reconnectWebSocket();
+            } else {
+                // Connect to version instance
+                versionPort = selectedOption.dataset.port;
+                reconnectWebSocket();
+            }
+        }
+
+        function reconnectWebSocket() {
+            if (ws) {
+                ws.close();
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = versionPort
+                ? window.location.hostname + ':' + versionPort
+                : window.location.host;
+
+            ws = new WebSocket(protocol + '//' + host + '/ws');
+            ws.onopen = () => {
+                isConnected = true;
+                statusDot.classList.add('connected');
+                sendBtn.disabled = false;
+                addSystemMessage(versionPort ? `Connected to version on port ${versionPort}` : 'Connected to main');
+            };
+            ws.onclose = () => {
+                isConnected = false;
+                statusDot.classList.remove('connected');
+                sendBtn.disabled = true;
+                setTimeout(() => { if (!isConnected) reconnectWebSocket(); }, 3000);
+            };
+            ws.onerror = (error) => console.error('WebSocket error:', error);
+            ws.onmessage = handleMessage;
+        }
+
+        async function showVersions() {
+            await loadVersions();
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+            const content = document.createElement('div');
+            content.className = 'modal-content';
+            content.style.cssText = 'max-width: 600px; max-height: 80vh; overflow-y: auto;';
+
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="margin: 0;">🔀 バージョン管理</h3>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">×</button>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 13px;">
+                    エージェントの改善バージョンを管理します。各バージョンは別ポートで起動します。
+                </p>
+            `;
+
+            if (versions.length === 0) {
+                html += `<div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+                    <p>バージョンがありません</p>
+                    <p style="font-size: 12px;">改善モードでAIに変更を依頼すると、新しいバージョンが作成されます。</p>
+                </div>`;
+            } else {
+                html += '<div style="display: flex; flex-direction: column; gap: 12px;">';
+                versions.forEach(v => {
+                    const statusIcon = getVersionStatusIcon(v.status);
+                    const portInfo = v.port ? `:${v.port}` : '';
+                    html += `
+                        <div style="background: var(--bg-input); border-radius: 8px; padding: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 20px;">${statusIcon}</span>
+                                    <strong>${v.name}</strong>
+                                    <span style="color: var(--text-muted); font-size: 12px;">${v.id}</span>
+                                    ${portInfo ? `<span style="color: var(--accent); font-size: 12px;">${portInfo}</span>` : ''}
+                                </div>
+                                <span style="font-size: 12px; color: var(--text-secondary);">${v.status}</span>
+                            </div>
+                            ${v.description ? `<p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">${v.description}</p>` : ''}
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                ${getVersionActions(v)}
+                            </div>
+                            ${v.error ? `<p style="color: var(--red); font-size: 12px; margin-top: 8px;">${v.error}</p>` : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            content.innerHTML = html;
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+
+        function getVersionStatusIcon(status) {
+            switch (status) {
+                case 'pending': return '⏳';
+                case 'building': return '🔨';
+                case 'ready': return '✅';
+                case 'running': return '🟢';
+                case 'failed': return '❌';
+                case 'stopped': return '⏹️';
+                default: return '❓';
+            }
+        }
+
+        function getVersionActions(v) {
+            let actions = '';
+            if (v.status === 'pending' || v.status === 'failed') {
+                actions += `<button class="btn" onclick="versionAction('${v.id}', 'build')">🔨 ビルド</button>`;
+            }
+            if (v.status === 'ready' || v.status === 'stopped') {
+                actions += `<button class="btn" onclick="versionAction('${v.id}', 'start')">▶️ 起動</button>`;
+            }
+            if (v.status === 'running') {
+                actions += `<button class="btn" onclick="versionAction('${v.id}', 'stop')">⏹️ 停止</button>`;
+                actions += `<button class="btn" onclick="versionAction('${v.id}', 'restart')">🔄 再起動</button>`;
+            }
+            actions += `<button class="btn" onclick="showVersionLogs('${v.id}')" style="margin-left: auto;">📋 ログ</button>`;
+            actions += `<button class="btn" onclick="deleteVersion('${v.id}')" style="color: var(--red);">🗑️</button>`;
+            return actions;
+        }
+
+        async function versionAction(id, action) {
+            try {
+                const resp = await fetch(`/api/versions/${id}/${action}`, { method: 'POST' });
+                if (!resp.ok) {
+                    const err = await resp.text();
+                    alert('Error: ' + err);
+                    return;
+                }
+                // Reload versions and update UI
+                await loadVersions();
+                showVersions();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function deleteVersion(id) {
+            if (!confirm('このバージョンを削除しますか？')) return;
+            try {
+                const resp = await fetch(`/api/versions/${id}`, { method: 'DELETE' });
+                if (!resp.ok) {
+                    const err = await resp.text();
+                    alert('Error: ' + err);
+                    return;
+                }
+                await loadVersions();
+                showVersions();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function showVersionLogs(id) {
+            try {
+                const resp = await fetch(`/api/versions/${id}/logs`);
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+                const content = document.createElement('div');
+                content.className = 'modal-content';
+                content.style.cssText = 'max-width: 800px; max-height: 80vh;';
+                content.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="margin: 0;">📋 Version Logs: ${id}</h3>
+                        <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);">×</button>
+                    </div>
+                    <pre style="background: var(--bg-input); padding: 16px; border-radius: 8px; overflow: auto; max-height: 60vh; font-size: 12px; white-space: pre-wrap;">${data.logs || '(no logs)'}</pre>
+                `;
+                modal.appendChild(content);
+                document.body.appendChild(modal);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
         // ================== Initialize ==================
         async function init() {
             // Generate conversation ID
@@ -3120,6 +3638,9 @@
 
             // Connect WebSocket
             connect();
+
+            // Load versions
+            loadVersions();
 
             // Show sidebar by default on desktop
             if (window.innerWidth > 900) {

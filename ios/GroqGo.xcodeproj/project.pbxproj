@@ -1,0 +1,582 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		E01A00012B000001 /* GroqGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000001 /* GroqGoApp.swift */; };
+		E01A00012B000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000002 /* ContentView.swift */; };
+		E01A00012B000003 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000003 /* ChatView.swift */; };
+		E01A00012B000004 /* WebSocketClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000004 /* WebSocketClient.swift */; };
+		E01A00012B000005 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000005 /* Message.swift */; };
+		E01A00012B000006 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000006 /* ChatViewModel.swift */; };
+		E01A00012B000007 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000007 /* SettingsView.swift */; };
+		E01A00012B000008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E01A00002B000008 /* Assets.xcassets */; };
+		E01A00012B000010 /* GroqGoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000010 /* GroqGoTests.swift */; };
+		E01A00012B000011 /* WebSocketClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000011 /* WebSocketClientTests.swift */; };
+		E01A00012B000012 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000012 /* ChatViewModelTests.swift */; };
+		E01A00012B000020 /* GroqGoUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01A00002B000020 /* GroqGoUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E01A0003AB000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E01A0001AB000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E01A0002AB000001;
+			remoteInfo = GroqGo;
+		};
+		E01A0003AB000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E01A0001AB000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E01A0002AB000001;
+			remoteInfo = GroqGo;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		E01A00002B000001 /* GroqGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroqGoApp.swift; sourceTree = "<group>"; };
+		E01A00002B000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		E01A00002B000003 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		E01A00002B000004 /* WebSocketClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketClient.swift; sourceTree = "<group>"; };
+		E01A00002B000005 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
+		E01A00002B000006 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		E01A00002B000007 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		E01A00002B000008 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E01A00002B000009 /* GroqGo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GroqGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E01A00002B000010 /* GroqGoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroqGoTests.swift; sourceTree = "<group>"; };
+		E01A00002B000011 /* WebSocketClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketClientTests.swift; sourceTree = "<group>"; };
+		E01A00002B000012 /* ChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelTests.swift; sourceTree = "<group>"; };
+		E01A00002B000013 /* GroqGoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GroqGoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E01A00002B000020 /* GroqGoUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroqGoUITests.swift; sourceTree = "<group>"; };
+		E01A00002B000021 /* GroqGoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GroqGoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E01A0004AB000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E01A0004AB000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E01A0004AB000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E01A0005AB000000 = {
+			isa = PBXGroup;
+			children = (
+				E01A0005AB000001 /* GroqGo */,
+				E01A0005AB000002 /* GroqGoTests */,
+				E01A0005AB000003 /* GroqGoUITests */,
+				E01A0005AB000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E01A0005AB000001 /* GroqGo */ = {
+			isa = PBXGroup;
+			children = (
+				E01A00002B000001 /* GroqGoApp.swift */,
+				E01A00002B000002 /* ContentView.swift */,
+				E01A00002B000003 /* ChatView.swift */,
+				E01A00002B000004 /* WebSocketClient.swift */,
+				E01A00002B000005 /* Message.swift */,
+				E01A00002B000006 /* ChatViewModel.swift */,
+				E01A00002B000007 /* SettingsView.swift */,
+				E01A00002B000008 /* Assets.xcassets */,
+			);
+			path = GroqGo;
+			sourceTree = "<group>";
+		};
+		E01A0005AB000002 /* GroqGoTests */ = {
+			isa = PBXGroup;
+			children = (
+				E01A00002B000010 /* GroqGoTests.swift */,
+				E01A00002B000011 /* WebSocketClientTests.swift */,
+				E01A00002B000012 /* ChatViewModelTests.swift */,
+			);
+			path = GroqGoTests;
+			sourceTree = "<group>";
+		};
+		E01A0005AB000003 /* GroqGoUITests */ = {
+			isa = PBXGroup;
+			children = (
+				E01A00002B000020 /* GroqGoUITests.swift */,
+			);
+			path = GroqGoUITests;
+			sourceTree = "<group>";
+		};
+		E01A0005AB000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E01A00002B000009 /* GroqGo.app */,
+				E01A00002B000013 /* GroqGoTests.xctest */,
+				E01A00002B000021 /* GroqGoUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E01A0002AB000001 /* GroqGo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E01A0006AB000001 /* Build configuration list for PBXNativeTarget "GroqGo" */;
+			buildPhases = (
+				E01A0007AB000001 /* Sources */,
+				E01A0004AB000001 /* Frameworks */,
+				E01A0008AB000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GroqGo;
+			productName = GroqGo;
+			productReference = E01A00002B000009 /* GroqGo.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E01A0002AB000002 /* GroqGoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E01A0006AB000002 /* Build configuration list for PBXNativeTarget "GroqGoTests" */;
+			buildPhases = (
+				E01A0007AB000002 /* Sources */,
+				E01A0004AB000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E01A0009AB000001 /* PBXTargetDependency */,
+			);
+			name = GroqGoTests;
+			productName = GroqGoTests;
+			productReference = E01A00002B000013 /* GroqGoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		E01A0002AB000003 /* GroqGoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E01A0006AB000003 /* Build configuration list for PBXNativeTarget "GroqGoUITests" */;
+			buildPhases = (
+				E01A0007AB000003 /* Sources */,
+				E01A0004AB000003 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E01A0009AB000002 /* PBXTargetDependency */,
+			);
+			name = GroqGoUITests;
+			productName = GroqGoUITests;
+			productReference = E01A00002B000021 /* GroqGoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E01A0001AB000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1520;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					E01A0002AB000001 = {
+						CreatedOnToolsVersion = 15.2;
+					};
+					E01A0002AB000002 = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = E01A0002AB000001;
+					};
+					E01A0002AB000003 = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = E01A0002AB000001;
+					};
+				};
+			};
+			buildConfigurationList = E01A0006AB000000 /* Build configuration list for PBXProject "GroqGo" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				ja,
+			);
+			mainGroup = E01A0005AB000000;
+			productRefGroup = E01A0005AB000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E01A0002AB000001 /* GroqGo */,
+				E01A0002AB000002 /* GroqGoTests */,
+				E01A0002AB000003 /* GroqGoUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E01A0008AB000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E01A00012B000008 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E01A0007AB000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E01A00012B000001 /* GroqGoApp.swift in Sources */,
+				E01A00012B000002 /* ContentView.swift in Sources */,
+				E01A00012B000003 /* ChatView.swift in Sources */,
+				E01A00012B000004 /* WebSocketClient.swift in Sources */,
+				E01A00012B000005 /* Message.swift in Sources */,
+				E01A00012B000006 /* ChatViewModel.swift in Sources */,
+				E01A00012B000007 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E01A0007AB000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E01A00012B000010 /* GroqGoTests.swift in Sources */,
+				E01A00012B000011 /* WebSocketClientTests.swift in Sources */,
+				E01A00012B000012 /* ChatViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E01A0007AB000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E01A00012B000020 /* GroqGoUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E01A0009AB000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E01A0002AB000001 /* GroqGo */;
+			targetProxy = E01A0003AB000001 /* PBXContainerItemProxy */;
+		};
+		E01A0009AB000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E01A0002AB000001 /* GroqGo */;
+			targetProxy = E01A0003AB000002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		E01A000AAB000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		E01A000AAB000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E01A000AAB000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 5BV85JW8US;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Groq Go";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.groqgo.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E01A000AAB000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 5BV85JW8US;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Groq Go";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.groqgo.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E01A000AAB000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.groqgo.appTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GroqGo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GroqGo";
+			};
+			name = Debug;
+		};
+		E01A000AAB000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.groqgo.appTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GroqGo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GroqGo";
+			};
+			name = Release;
+		};
+		E01A000AAB000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.groqgo.appUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = GroqGo;
+			};
+			name = Debug;
+		};
+		E01A000AAB000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.groqgo.appUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = GroqGo;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E01A0006AB000000 /* Build configuration list for PBXProject "GroqGo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E01A000AAB000001 /* Debug */,
+				E01A000AAB000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E01A0006AB000001 /* Build configuration list for PBXNativeTarget "GroqGo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E01A000AAB000003 /* Debug */,
+				E01A000AAB000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E01A0006AB000002 /* Build configuration list for PBXNativeTarget "GroqGoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E01A000AAB000005 /* Debug */,
+				E01A000AAB000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E01A0006AB000003 /* Build configuration list for PBXNativeTarget "GroqGoUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E01A000AAB000007 /* Debug */,
+				E01A000AAB000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E01A0001AB000000 /* Project object */;
+}
