@@ -111,17 +111,18 @@ func (rl *rateLimiter) allow(clientIP string) bool {
 
 // Server represents the web server
 type Server struct {
-	client    *client.Client
-	registry  *tool.Registry
-	executor  *tool.Executor
-	storage   storage.Storage
-	auth      *auth.Manager
-	projects  *project.Manager
-	knowledge *knowledge.KnowledgeBase
-	plugins   *plugin.Manager
-	versions  *version.Manager
-	addr      string
-	uploadDir string
+	client       *client.Client
+	registry     *tool.Registry
+	executor     *tool.Executor
+	storage      storage.Storage
+	auth         *auth.Manager
+	projects     *project.Manager
+	knowledge    *knowledge.KnowledgeBase
+	plugins      *plugin.Manager
+	versions     *version.Manager
+	versionProxy *version.Proxy
+	addr         string
+	uploadDir    string
 }
 
 // NewServer creates a new web server
@@ -149,18 +150,30 @@ func NewServer(c *client.Client, registry *tool.Registry, kb *knowledge.Knowledg
 	uploadDir := filepath.Join(home, ".config", "groq-go", "uploads")
 	os.MkdirAll(uploadDir, 0755)
 
+	// Initialize version proxy if version manager is available
+	var versionProxy *version.Proxy
+	if vm != nil {
+		// Get main domain from environment or default
+		mainDomain := os.Getenv("MAIN_DOMAIN")
+		if mainDomain == "" {
+			mainDomain = "chatweb.ai"
+		}
+		versionProxy = version.NewProxy(vm, mainDomain)
+	}
+
 	return &Server{
-		client:    c,
-		registry:  registry,
-		executor:  tool.NewExecutor(registry),
-		storage:   store,
-		auth:      authManager,
-		projects:  projectManager,
-		knowledge: kb,
-		plugins:   pm,
-		versions:  vm,
-		addr:      addr,
-		uploadDir: uploadDir,
+		client:       c,
+		registry:     registry,
+		executor:     tool.NewExecutor(registry),
+		storage:      store,
+		auth:         authManager,
+		projects:     projectManager,
+		knowledge:    kb,
+		plugins:      pm,
+		versions:     vm,
+		versionProxy: versionProxy,
+		addr:         addr,
+		uploadDir:    uploadDir,
 	}
 }
 
@@ -219,7 +232,15 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/versions/", rateLimitMiddleware(s.handleVersion))
 
 	log.Info("Starting web server", "addr", s.addr)
-	return http.ListenAndServe(s.addr, mux)
+
+	// Wrap with version proxy if available
+	var handler http.Handler = mux
+	if s.versionProxy != nil {
+		handler = s.versionProxy.ProxyHandler(mux)
+		log.Info("Version proxy enabled", "domain", os.Getenv("MAIN_DOMAIN"))
+	}
+
+	return http.ListenAndServe(s.addr, handler)
 }
 
 // WSMessage represents WebSocket message types
