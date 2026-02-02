@@ -2431,7 +2431,7 @@
         let voiceChatMode = false;
         let voiceChatOverlay = null;
         let currentTranscript = '';
-        let voiceOutputEnabled = localStorage.getItem('voiceOutput') === 'true';
+        let voiceOutputEnabled = localStorage.getItem('voiceOutput') !== 'false'; // Default: ON
         let silenceTimer = null;
         let isSpeaking = false;
 
