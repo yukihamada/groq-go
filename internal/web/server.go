@@ -52,9 +52,10 @@ var staticFiles embed.FS
 
 // Allowed origins for WebSocket connections
 var allowedOrigins = map[string]bool{
-	"localhost":             true,
-	"127.0.0.1":             true,
-	"groq-go-yuki.fly.dev":  true,
+	"localhost":            true,
+	"127.0.0.1":            true,
+	"groq-go-yuki.fly.dev": true,
+	"chatweb.ai":           true,
 }
 
 var upgrader = websocket.Upgrader{
