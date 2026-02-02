@@ -1,0 +1,1 @@
+日本語化されたSelfImprove.goの内容
