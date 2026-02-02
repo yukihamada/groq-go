@@ -1732,6 +1732,7 @@
                 </optgroup>
             </select>
             <button class="btn" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+            <button class="btn" id="voice-output-toggle" onclick="toggleVoiceOutput()" title="音声で返答">🔇</button>
             <button class="btn" id="voice-chat-btn" onclick="startVoiceChat()">🎙️</button>
             <button class="btn" id="toggle-preview" onclick="togglePreview()">📺</button>
             <div class="menu-container" style="position: relative;">
@@ -2430,6 +2431,7 @@
         let voiceChatMode = false;
         let voiceChatOverlay = null;
         let currentTranscript = '';
+        let voiceOutputEnabled = localStorage.getItem('voiceOutput') === 'true';
         let silenceTimer = null;
         let isSpeaking = false;
 
@@ -3072,6 +3074,9 @@
                         // Voice chat: speak the response
                         if (voiceChatMode) {
                             handleVoiceChatResponse(content);
+                        } else if (voiceOutputEnabled) {
+                            // Normal chat with voice output enabled
+                            speakAssistantResponse(content);
                         }
                     }
                     currentAssistantMessage = null;
@@ -3699,6 +3704,31 @@
             localStorage.setItem('theme', theme);
         }
 
+        // ================== Voice Output Toggle ==================
+        function initVoiceOutput() {
+            const btn = document.getElementById('voice-output-toggle');
+            if (btn) {
+                btn.textContent = voiceOutputEnabled ? '🔊' : '🔇';
+                btn.title = voiceOutputEnabled ? '音声出力ON' : '音声出力OFF';
+            }
+        }
+
+        function toggleVoiceOutput() {
+            voiceOutputEnabled = !voiceOutputEnabled;
+            localStorage.setItem('voiceOutput', voiceOutputEnabled);
+            const btn = document.getElementById('voice-output-toggle');
+            if (btn) {
+                btn.textContent = voiceOutputEnabled ? '🔊' : '🔇';
+                btn.title = voiceOutputEnabled ? '音声出力ON' : '音声出力OFF';
+            }
+        }
+
+        // Speak assistant response when voice output is enabled
+        function speakAssistantResponse(text) {
+            if (!voiceOutputEnabled || voiceChatMode) return;
+            speak(text);
+        }
+
         // ================== Version Management ==================
         let versions = [];
         let currentVersion = 'main';
@@ -3931,6 +3961,9 @@
         async function init() {
             // Initialize theme
             initTheme();
+
+            // Initialize voice output
+            initVoiceOutput();
 
             // Generate conversation ID
             currentConversationId = 'conv-' + Date.now();
