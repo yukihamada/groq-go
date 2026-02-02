@@ -2750,11 +2750,64 @@
 
             isSpeaking = true;
 
-            // Try Kokoro TTS for Japanese
-            if (isJapanese(cleanText)) {
-                speakWithKokoro(cleanText, callback);
-            } else {
-                speakWithWebSpeech(cleanText, callback);
+            // Try ElevenLabs first (for custom voice), then Kokoro for Japanese, then Web Speech
+            speakWithElevenLabs(cleanText, callback);
+        }
+
+        async function speakWithElevenLabs(text, callback) {
+            try {
+                const response = await fetch('/api/tts/elevenlabs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    if (data.fallback) {
+                        // Fallback to Kokoro or Web Speech
+                        if (isJapanese(text)) {
+                            speakWithKokoro(text, callback);
+                        } else {
+                            speakWithWebSpeech(text, callback);
+                        }
+                        return;
+                    }
+                    throw new Error('ElevenLabs TTS failed');
+                }
+
+                // Play audio directly
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                currentAudio = new Audio(audioUrl);
+                currentAudio.onended = () => {
+                    isSpeaking = false;
+                    currentAudio = null;
+                    URL.revokeObjectURL(audioUrl);
+                    if (callback) callback();
+                };
+                currentAudio.onerror = (e) => {
+                    console.error('ElevenLabs audio error:', e);
+                    isSpeaking = false;
+                    currentAudio = null;
+                    URL.revokeObjectURL(audioUrl);
+                    // Fallback
+                    if (isJapanese(text)) {
+                        speakWithKokoro(text, callback);
+                    } else {
+                        speakWithWebSpeech(text, callback);
+                    }
+                };
+                currentAudio.play();
+
+            } catch (error) {
+                console.error('ElevenLabs TTS error:', error);
+                // Fallback to Kokoro or Web Speech
+                if (isJapanese(text)) {
+                    speakWithKokoro(text, callback);
+                } else {
+                    speakWithWebSpeech(text, callback);
+                }
             }
         }
 

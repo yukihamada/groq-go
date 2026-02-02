@@ -236,6 +236,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/plugins", rateLimitMiddleware(s.handlePlugins))
 	mux.HandleFunc("/api/plugins/", rateLimitMiddleware(s.handlePlugin))
 	mux.HandleFunc("/api/tts", rateLimitMiddleware(s.handleTTS))
+	mux.HandleFunc("/api/tts/elevenlabs", rateLimitMiddleware(s.handleElevenLabsTTS))
 
 	// Version management endpoints
 	mux.HandleFunc("/api/versions", rateLimitMiddleware(s.handleVersions))
@@ -1476,6 +1477,95 @@ func (s *Server) handleTTS(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{
 		"audio_url": ttsResp.Audio.URL,
 	})
+}
+
+// handleElevenLabsTTS handles text-to-speech using ElevenLabs API
+func (s *Server) handleElevenLabsTTS(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Text    string  `json:"text"`
+		VoiceID string  `json:"voice_id"`
+		ModelID string  `json:"model_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Text == "" {
+		http.Error(w, "Text is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get ElevenLabs API key from environment
+	apiKey := os.Getenv("ELEVENLABS_API_KEY")
+	if apiKey == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"fallback": true, "error": "ElevenLabs API key not configured"})
+		return
+	}
+
+	// Default voice ID (can be overridden)
+	voiceID := req.VoiceID
+	if voiceID == "" {
+		voiceID = os.Getenv("ELEVENLABS_VOICE_ID")
+		if voiceID == "" {
+			voiceID = "21m00Tcm4TlvDq8ikWAM" // Default: Rachel
+		}
+	}
+
+	// Default model
+	modelID := req.ModelID
+	if modelID == "" {
+		modelID = "eleven_multilingual_v2"
+	}
+
+	// Call ElevenLabs API
+	ttsReq := map[string]any{
+		"text":     req.Text,
+		"model_id": modelID,
+		"voice_settings": map[string]any{
+			"stability":        0.5,
+			"similarity_boost": 0.75,
+		},
+	}
+	ttsBody, _ := json.Marshal(ttsReq)
+
+	url := fmt.Sprintf("https://api.elevenlabs.io/v1/text-to-speech/%s", voiceID)
+	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(ttsBody))
+	if err != nil {
+		http.Error(w, "Failed to create request", http.StatusInternalServerError)
+		return
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("xi-api-key", apiKey)
+	httpReq.Header.Set("Accept", "audio/mpeg")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		log.Error("ElevenLabs TTS request failed", "error", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"fallback": true, "error": err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Error("ElevenLabs API error", "status", resp.StatusCode, "response", string(body))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"fallback": true, "error": "ElevenLabs API error"})
+		return
+	}
+
+	// Stream audio directly to client
+	w.Header().Set("Content-Type", "audio/mpeg")
+	io.Copy(w, resp.Body)
 }
 
 func (s *Server) getSystemPrompt(mode string) string {
