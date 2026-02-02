@@ -736,13 +736,28 @@
             }
 
             .header-actions .btn {
-                padding: 10px;
-                font-size: 16px;
+                padding: 8px;
+                font-size: 14px;
+                min-width: 36px;
+                min-height: 36px;
             }
 
             .header-actions select {
-                max-width: 90px;
-                font-size: 12px;
+                max-width: 80px;
+                font-size: 11px;
+                padding: 6px;
+                min-height: 36px;
+            }
+
+            .credits-badge {
+                padding: 4px 8px;
+                font-size: 11px;
+                border-radius: 12px;
+            }
+
+            .credits-badge span {
+                max-width: 30px;
+                overflow: hidden;
             }
 
             .preview-panel {
@@ -1003,9 +1018,11 @@
             .sidebar {
                 position: fixed;
                 left: 0;
-                top: 0;
+                top: 56px;
                 bottom: 0;
                 z-index: 200;
+                width: 280px;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.5);
                 width: 280px;
                 transform: translateX(-100%);
                 transition: transform 0.3s ease;
@@ -1731,11 +1748,8 @@
                 <div class="empty-state" id="empty-state">
                     <h2>👋 Welcome to groq-go</h2>
                     <p>AI assistant in your browser. Create websites, apps, and more!</p>
-                    <div class="suggestions">
-                        <div class="suggestion" onclick="sendSuggestion('Create a simple landing page for a coffee shop')">☕ Coffee Shop</div>
-                        <div class="suggestion" onclick="sendSuggestion('Create a todo list app with HTML, CSS, and JavaScript')">📝 Todo App</div>
-                        <div class="suggestion" onclick="sendSuggestion('Create a calculator with a nice UI')">🧮 Calculator</div>
-                        <div class="suggestion" onclick="sendSuggestion('Create a weather widget')">🌤️ Weather</div>
+                    <div class="suggestions" id="suggestions-container">
+                        <!-- Populated by JavaScript -->
                     </div>
                 </div>
             </div>
@@ -3156,6 +3170,38 @@
             sendMessage();
         }
 
+        // Dynamic suggestions
+        const allSuggestions = [
+            { emoji: '☕', text: 'Create a simple landing page for a coffee shop', label: 'Coffee Shop' },
+            { emoji: '📝', text: 'Create a todo list app with HTML, CSS, and JavaScript', label: 'Todo App' },
+            { emoji: '🧮', text: 'Create a calculator with a nice UI', label: 'Calculator' },
+            { emoji: '🌤️', text: 'Create a weather widget', label: 'Weather' },
+            { emoji: '🎮', text: 'Create a simple snake game', label: 'Snake Game' },
+            { emoji: '⏱️', text: 'Create a pomodoro timer app', label: 'Pomodoro' },
+            { emoji: '📊', text: 'Create a dashboard with charts', label: 'Dashboard' },
+            { emoji: '🎨', text: 'Create a color palette generator', label: 'Colors' },
+            { emoji: '📅', text: 'Create a calendar widget', label: 'Calendar' },
+            { emoji: '💬', text: 'Create a chat UI mockup', label: 'Chat UI' },
+            { emoji: '🔐', text: 'Create a login form with validation', label: 'Login Form' },
+            { emoji: '🎵', text: 'Create a music player UI', label: 'Music Player' },
+        ];
+
+        function initSuggestions() {
+            const container = document.getElementById('suggestions-container');
+            if (!container) return;
+
+            // Shuffle and pick 4
+            const shuffled = [...allSuggestions].sort(() => Math.random() - 0.5);
+            const selected = shuffled.slice(0, 4);
+
+            container.innerHTML = selected.map(s =>
+                `<div class="suggestion" onclick="sendSuggestion('${s.text.replace(/'/g, "\\'")}')">${s.emoji} ${s.label}</div>`
+            ).join('');
+        }
+
+        // Initialize suggestions on load
+        initSuggestions();
+
         function toggleMenu() {
             const menu = document.getElementById('header-menu');
             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
@@ -3206,9 +3252,9 @@
                 panel.className = 'modal-overlay';
                 panel.innerHTML = `
                     <div class="modal" style="max-width: 400px;">
-                        <div class="modal-header">
-                            <h3>💰 クレジット情報</h3>
-                            <button onclick="this.closest('.modal-overlay').remove()">✕</button>
+                        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border);">
+                            <h3 style="margin: 0;">💰 クレジット情報</h3>
+                            <button onclick="this.closest('.modal-overlay').remove()" style="background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">✕</button>
                         </div>
                         <div class="modal-content" style="padding: 20px;">
                             <div style="text-align: center; margin-bottom: 20px;">
@@ -3233,9 +3279,14 @@
                                     ).join('')}
                                 </div>
                             </div>
-                            <p style="font-size: 12px; color: var(--text-muted); text-align: center;">
+                            <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-bottom: 16px;">
                                 新規ユーザーには100クレジットが付与されます
                             </p>
+                            ${data.balance < 20 ? `
+                            <button onclick="alert('クレジット購入機能は準備中です。\\nお問い合わせ: mail@yukihamada.jp')" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--accent), #7c3aed); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer;">
+                                💳 クレジットを購入
+                            </button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
