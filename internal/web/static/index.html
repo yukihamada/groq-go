@@ -131,6 +131,36 @@
             border-color: var(--accent);
         }
 
+        .credits-badge {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-input));
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .credits-badge:hover {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+        }
+
+        .credits-badge.low {
+            border-color: var(--yellow);
+            background: rgba(234, 179, 8, 0.1);
+        }
+
+        .credits-badge.empty {
+            border-color: var(--red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
         .status {
             display: flex;
             align-items: center;
@@ -1636,6 +1666,9 @@
             </div>
         </div>
         <div class="header-actions">
+            <div id="credits-display" class="credits-badge" title="Your remaining credits">
+                💰 <span id="credits-count">--</span>
+            </div>
             <select id="version-select" style="max-width: 100px; display: none;" onchange="switchVersion()">
                 <option value="main">main</option>
             </select>
@@ -2956,6 +2989,10 @@
                     hideTyping();
                     currentAssistantMessage = null;
                     break;
+
+                case 'credits':
+                    updateCreditsDisplay(parseInt(msg.content));
+                    break;
             }
         }
 
@@ -3123,6 +3160,96 @@
             const menu = document.getElementById('header-menu');
             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
         }
+
+        // Credits management
+        let userCredits = 0;
+
+        async function fetchCredits() {
+            try {
+                const response = await fetch('/api/credits');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateCreditsDisplay(data.balance);
+                }
+            } catch (e) {
+                console.log('Credits not available');
+            }
+        }
+
+        function updateCreditsDisplay(balance) {
+            userCredits = balance;
+            const creditsCount = document.getElementById('credits-count');
+            const creditsDisplay = document.getElementById('credits-display');
+
+            creditsCount.textContent = balance;
+
+            // Update badge style based on balance
+            creditsDisplay.classList.remove('low', 'empty');
+            if (balance <= 0) {
+                creditsDisplay.classList.add('empty');
+            } else if (balance < 20) {
+                creditsDisplay.classList.add('low');
+            }
+        }
+
+        // Show credits details on click
+        document.getElementById('credits-display')?.addEventListener('click', showCreditsPanel);
+
+        async function showCreditsPanel() {
+            try {
+                const response = await fetch('/api/credits');
+                if (!response.ok) return;
+
+                const data = await response.json();
+
+                const panel = document.createElement('div');
+                panel.className = 'modal-overlay';
+                panel.innerHTML = `
+                    <div class="modal" style="max-width: 400px;">
+                        <div class="modal-header">
+                            <h3>💰 クレジット情報</h3>
+                            <button onclick="this.closest('.modal-overlay').remove()">✕</button>
+                        </div>
+                        <div class="modal-content" style="padding: 20px;">
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <div style="font-size: 48px; font-weight: bold; color: var(--accent);">${data.balance}</div>
+                                <div style="color: var(--text-secondary);">残りクレジット</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                                <div style="background: var(--bg-input); padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 20px; font-weight: bold;">${data.total_used}</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">使用済み</div>
+                                </div>
+                                <div style="background: var(--bg-input); padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 20px; font-weight: bold;">${data.free_credits}</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">無料付与</div>
+                                </div>
+                            </div>
+                            <div style="background: var(--bg-input); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">モデル別コスト</div>
+                                <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                                    ${Object.entries(data.costs || {}).map(([model, cost]) =>
+                                        `<div style="display: flex; justify-content: space-between;"><span>${model.split('-').slice(0,2).join('-')}</span><span>${cost}c</span></div>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                            <p style="font-size: 12px; color: var(--text-muted); text-align: center;">
+                                新規ユーザーには100クレジットが付与されます
+                            </p>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(panel);
+                panel.addEventListener('click', (e) => {
+                    if (e.target === panel) panel.remove();
+                });
+            } catch (e) {
+                console.error('Failed to load credits:', e);
+            }
+        }
+
+        // Fetch credits on page load
+        fetchCredits();
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {

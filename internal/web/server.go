@@ -21,6 +21,7 @@ import (
 
 	"groq-go/internal/auth"
 	"groq-go/internal/client"
+	"groq-go/internal/credits"
 	"groq-go/internal/knowledge"
 	"groq-go/internal/logging"
 	"groq-go/internal/plugin"
@@ -121,6 +122,7 @@ type Server struct {
 	plugins      *plugin.Manager
 	versions     *version.Manager
 	versionProxy *version.Proxy
+	credits      *credits.Manager
 	addr         string
 	uploadDir    string
 }
@@ -161,6 +163,12 @@ func NewServer(c *client.Client, registry *tool.Registry, kb *knowledge.Knowledg
 		versionProxy = version.NewProxy(vm, mainDomain)
 	}
 
+	// Initialize credits manager
+	creditsManager, err := credits.NewManager()
+	if err != nil {
+		log.Warn("Failed to initialize credits manager", "error", err)
+	}
+
 	return &Server{
 		client:       c,
 		registry:     registry,
@@ -172,6 +180,7 @@ func NewServer(c *client.Client, registry *tool.Registry, kb *knowledge.Knowledg
 		plugins:      pm,
 		versions:     vm,
 		versionProxy: versionProxy,
+		credits:      creditsManager,
 		addr:         addr,
 		uploadDir:    uploadDir,
 	}
@@ -231,6 +240,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/versions", rateLimitMiddleware(s.handleVersions))
 	mux.HandleFunc("/api/versions/", rateLimitMiddleware(s.handleVersion))
 
+	// Credit management endpoints
+	mux.HandleFunc("/api/credits", rateLimitMiddleware(s.handleCredits))
+	mux.HandleFunc("/api/credits/", rateLimitMiddleware(s.handleCreditAction))
+
 	log.Info("Starting web server", "addr", s.addr)
 
 	// Wrap with version proxy if available
@@ -273,12 +286,27 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	clientIP := r.RemoteAddr
+	if fwdFor := r.Header.Get("X-Forwarded-For"); fwdFor != "" {
+		clientIP = strings.Split(fwdFor, ",")[0]
+	}
 	log.Info("New WebSocket connection", "client_ip", clientIP)
 
-	// Send welcome message
+	// Create or get user based on IP (can be enhanced with proper auth later)
+	userID := "user_" + strings.ReplaceAll(strings.ReplaceAll(clientIP, ".", "_"), ":", "_")
+	var userCredits *credits.UserCredits
+	if s.credits != nil {
+		userCredits = s.credits.GetOrCreateUser(userID, "")
+		log.Info("User credits", "user_id", userID, "balance", userCredits.Balance)
+	}
+
+	// Send welcome message with credit info
+	welcomeMsg := fmt.Sprintf("Connected to groq-go. Model: %s", s.client.Model())
+	if userCredits != nil {
+		welcomeMsg += fmt.Sprintf(" | Credits: %d", userCredits.Balance)
+	}
 	s.sendMessage(conn, WSMessage{
 		Type:    "system",
-		Content: fmt.Sprintf("Connected to groq-go. Model: %s", s.client.Model()),
+		Content: welcomeMsg,
 	})
 
 	// Message history for this session
@@ -334,7 +362,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			mu.Lock()
-			s.handleChat(conn, msg.Content, msg.Images, &history, clientIP, currentMode)
+			s.handleChat(conn, msg.Content, msg.Images, &history, clientIP, userID, currentMode)
 			mu.Unlock()
 
 		case "model":
@@ -366,8 +394,22 @@ func truncateLog(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func (s *Server) handleChat(conn *websocket.Conn, userMessage string, images []string, history *[]client.Message, clientIP string, mode string) {
+func (s *Server) handleChat(conn *websocket.Conn, userMessage string, images []string, history *[]client.Message, clientIP string, userID string, mode string) {
 	ctx := context.Background()
+
+	// Check credits before processing
+	model := s.client.Model()
+	if s.credits != nil {
+		hasCredits, balance, cost := s.credits.CheckCredits(userID, model)
+		if !hasCredits {
+			s.sendMessage(conn, WSMessage{
+				Type:  "error",
+				Error: fmt.Sprintf("Insufficient credits: need %d, have %d. Please add more credits.", cost, balance),
+			})
+			s.sendMessage(conn, WSMessage{Type: "done"})
+			return
+		}
+	}
 
 	// Add user message (with images if present)
 	var msg client.Message
@@ -462,6 +504,20 @@ func (s *Server) handleChat(conn *websocket.Conn, userMessage string, images []s
 
 		// No more tool calls
 		break
+	}
+
+	// Deduct credits after successful completion
+	if s.credits != nil {
+		if err := s.credits.UseCredits(userID, model, 0); err != nil {
+			log.Warn("Failed to deduct credits", "user_id", userID, "error", err)
+		} else {
+			// Send updated balance
+			balance := s.credits.GetBalance(userID)
+			s.sendMessage(conn, WSMessage{
+				Type:    "credits",
+				Content: fmt.Sprintf("%d", balance),
+			})
+		}
 	}
 
 	// Signal end of response
@@ -1553,6 +1609,106 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// Credit management handlers
+func (s *Server) handleCredits(w http.ResponseWriter, r *http.Request) {
+	if s.credits == nil {
+		http.Error(w, "Credits not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Get user ID from request (IP-based for now)
+	clientIP := r.RemoteAddr
+	if fwdFor := r.Header.Get("X-Forwarded-For"); fwdFor != "" {
+		clientIP = strings.Split(fwdFor, ",")[0]
+	}
+	userID := "user_" + strings.ReplaceAll(strings.ReplaceAll(clientIP, ".", "_"), ":", "_")
+
+	switch r.Method {
+	case http.MethodGet:
+		user := s.credits.GetOrCreateUser(userID, "")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"user_id":      user.UserID,
+			"balance":      user.Balance,
+			"total_used":   user.TotalUsed,
+			"total_bought": user.TotalBought,
+			"free_credits": user.FreeCredits,
+			"costs":        credits.CreditCost,
+		})
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleCreditAction(w http.ResponseWriter, r *http.Request) {
+	if s.credits == nil {
+		http.Error(w, "Credits not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Get user ID from request
+	clientIP := r.RemoteAddr
+	if fwdFor := r.Header.Get("X-Forwarded-For"); fwdFor != "" {
+		clientIP = strings.Split(fwdFor, ",")[0]
+	}
+	userID := "user_" + strings.ReplaceAll(strings.ReplaceAll(clientIP, ".", "_"), ":", "_")
+
+	// Extract action from path: /api/credits/{action}
+	action := strings.TrimPrefix(r.URL.Path, "/api/credits/")
+
+	switch action {
+	case "history":
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		user := s.credits.GetUserInfo(userID)
+		if user == nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"transactions": user.Transactions,
+		})
+
+	case "add":
+		// Admin endpoint to add credits (should be protected in production)
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			UserID string `json:"user_id"`
+			Amount int    `json:"amount"`
+			Type   string `json:"type"` // "free" or "buy"
+			Note   string `json:"note"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		targetUserID := req.UserID
+		if targetUserID == "" {
+			targetUserID = userID
+		}
+		if req.Type == "" {
+			req.Type = "free"
+		}
+		if err := s.credits.AddCredits(targetUserID, req.Amount, req.Type, req.Note); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Info("Added credits", "user_id", targetUserID, "amount", req.Amount, "type", req.Type)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+
+	default:
+		http.Error(w, "Unknown action: "+action, http.StatusBadRequest)
 	}
 }
 
